@@ -16,7 +16,7 @@
   },
   "scripts": {
     "compile": "npx hardhat compile && npx hardhat size-contracts",
-    "deploy": "npx hardhat run scripts/deploy.js --network zkfair"
+    "deploy": "npx hardhat run scripts/deploy.js --network btclayer2"
   },
   "dependencies": {
     "dotenv": "^8.6.0",

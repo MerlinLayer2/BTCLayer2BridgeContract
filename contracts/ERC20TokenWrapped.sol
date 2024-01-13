@@ -2,9 +2,9 @@
 // Implementation of permit based on https://github.com/WETH10/WETH10/blob/main/contracts/WETH10.sol
 pragma solidity 0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
-contract ERC20TokenWrapped is ERC20 {
+contract ERC20TokenWrapped is ERC20Permit {
     // PolygonZkEVM Bridge address
     address public immutable bridgeAddress;
 
@@ -23,7 +23,7 @@ contract ERC20TokenWrapped is ERC20 {
         string memory name,
         string memory symbol,
         uint8 __decimals
-    ) ERC20(name, symbol) {
+    ) ERC20(name, symbol) ERC20Permit(name) {
         bridgeAddress = msg.sender;
         _decimals = __decimals;
     }

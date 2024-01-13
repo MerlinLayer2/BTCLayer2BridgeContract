@@ -20,7 +20,7 @@ module.exports = {
     ]
   },
   networks: {
-    zkfair: {
+    btclayer2: {
       url: `${process.env.NETWORK_URL}`,
       timeout: 2000000,
     },

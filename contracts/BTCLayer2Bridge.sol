@@ -3,32 +3,22 @@
 pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./ERC20TokenWrapped.sol";
-import "./ERC721TokenWrapped.sol";
+import "./interfaces/IBTCLayer2BridgeERC20.sol";
+import "./interfaces/IBTCLayer2BridgeERC721.sol";
 
 contract BTCLayer2Bridge is OwnableUpgradeable {
     address public superAdminAddress;
     address public normalAdminAddress;
     address[] public unlockTokenAdminAddressList;
     mapping(address => bool) public unlockTokenAdminAddressSupported;
-    mapping(bytes32 => address) public erc20TokenInfoToWrappedToken;
-    mapping(address => bool) public erc20TokenInfoSupported;
-    address[] public allERC20TokenAddress;
-    mapping(bytes32 => bool) public erc20TxHashUnlocked;
-    bytes32[] public allERC20TxHash;
-    mapping(address => bytes32[]) public userERC20MintTxHash;
-
-    mapping(bytes32 => address) public erc721TokenInfoToWrappedToken;
-    mapping(address => bool) public erc721TokenInfoSupported;
-    address[] public allERC721TokenAddress;
-    mapping(bytes32 => bool) public erc721TxHashUnlocked;
-    bytes32[] public allERC721TxHash;
-    mapping(address => bytes32[]) public userERC721MintTxHash;
 
     // nativeToken
     mapping(bytes32 => bool) public nativeTokenTxHashUnlocked;
     bytes32[] public allNativeTokenTxHash;
     mapping(address => bytes32[]) public userNativeTokenMintTxHash;
+
+    address public bridgeERC20Address;
+    address public bridgeERC721Address;
 
     uint256 public bridgeFee;
     address public feeAddress;
@@ -61,7 +51,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     event AddERC721TokenWrapped(
         address tokenWrappedAddress,
         string name,
-        string symbol
+        string symbol,
+        string baseURI
     );
 
     event MintERC721Token(
@@ -96,20 +87,21 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     receive() external payable {}
-    
+
     function initialize(
         address _initialOwner,
         address _superAdminAddress,
-        address _normalAdminAddress,
-        uint256  _bridgeFee,
+        address _bridgeERC20Address,
+        address _bridgeERC721Address,
         address _feeAddress
     ) external onlyValidAddress(_initialOwner)
     onlyValidAddress(_superAdminAddress)
-    onlyValidAddress(_normalAdminAddress)
+    onlyValidAddress(_bridgeERC20Address)
+    onlyValidAddress(_bridgeERC721Address)
     onlyValidAddress(_feeAddress) virtual initializer {
         superAdminAddress = _superAdminAddress;
-        normalAdminAddress = _normalAdminAddress;
-        bridgeFee = _bridgeFee;
+        bridgeERC20Address = _bridgeERC20Address;
+        bridgeERC721Address = _bridgeERC721Address;
         feeAddress = _feeAddress;
         // Initialize OZ contracts
         __Ownable_init_unchained(_initialOwner);
@@ -136,39 +128,20 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals) public returns(address) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        bytes32 tokenInfoHash = keccak256(
-            abi.encodePacked(_name, _symbol, _decimals)
-        );
-        address wrappedToken = erc20TokenInfoToWrappedToken[tokenInfoHash];
-        require(wrappedToken == address(0), "The current token already exists");
-        // Create a new wrapped erc20 using create2
-        ERC20TokenWrapped newWrappedToken = (new ERC20TokenWrapped){
-                salt: tokenInfoHash
-            }(_name, _symbol, _decimals);
-        // Create mappings
-        address tokenWrappedAddress = address(newWrappedToken);
-        erc20TokenInfoToWrappedToken[tokenInfoHash] = tokenWrappedAddress;
-        erc20TokenInfoSupported[tokenWrappedAddress] = true;
-        allERC20TokenAddress.push(tokenWrappedAddress);
+        address tokenWrappedAddress = IBTCLayer2BridgeERC20(bridgeERC20Address).addERC20TokenWrapped(_name, _symbol, _decimals);
         emit AddERC20TokenWrapped(tokenWrappedAddress, _name, _symbol, _decimals);
         return tokenWrappedAddress;
     }
 
     function mintERC20Token(bytes32 txHash, address token, address to, uint256 amount) public {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
-        require(erc20TxHashUnlocked[txHash] == false, "Transaction has been executed");
-        erc20TxHashUnlocked[txHash] = true;
-        require(erc20TokenInfoSupported[token], "This token is not supported");
-        ERC20TokenWrapped(token).mint(to, amount);
-        allERC20TxHash.push(txHash);
-        userERC20MintTxHash[to].push(txHash);
+        IBTCLayer2BridgeERC20(bridgeERC20Address).mintERC20Token(txHash, token, to, amount);
         emit MintERC20Token(txHash, token, to, amount);
     }
 
     function burnERC20Token(address token, uint256 amount) public payable {
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
-        require(erc20TokenInfoSupported[token], "This token is not supported");
-        ERC20TokenWrapped(token).burn(msg.sender, amount);
+        IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
         (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
@@ -176,41 +149,27 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BurnERC20Token(token, msg.sender, amount);
     }
 
-    function addERC721TokenWrapped(string memory _name, string memory _symbol) public {
+    function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) public returns(address) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        bytes32 tokenInfoHash = keccak256(
-            abi.encodePacked(_name, _symbol)
-        );
-        address wrappedToken = erc721TokenInfoToWrappedToken[tokenInfoHash];
-        require(wrappedToken == address(0), "The current token already exists");
-        // Create a new wrapped erc20 using create2
-        ERC721TokenWrapped newWrappedToken = (new ERC721TokenWrapped){
-                salt: tokenInfoHash
-            }(_name, _symbol);
-        // Create mappings
-        address tokenWrappedAddress = address(newWrappedToken);
-        erc721TokenInfoToWrappedToken[tokenInfoHash] = tokenWrappedAddress;
-        erc721TokenInfoSupported[tokenWrappedAddress] = true;
-        allERC721TokenAddress.push(tokenWrappedAddress);
-        emit AddERC721TokenWrapped(tokenWrappedAddress, _name, _symbol);
+        address tokenWrappedAddress = IBTCLayer2BridgeERC721(bridgeERC721Address).addERC721TokenWrapped(_name, _symbol, _baseURI);
+        emit AddERC721TokenWrapped(tokenWrappedAddress, _name, _symbol, _baseURI);
+        return tokenWrappedAddress;
+    }
+
+    function setBaseURI(address token, string calldata newBaseTokenURI) public {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        IBTCLayer2BridgeERC721(bridgeERC721Address).setBaseURI(token, newBaseTokenURI);
     }
 
     function mintERC721Token(bytes32 txHash, address token, address to, uint256 tokenId) public {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
-        require(erc721TxHashUnlocked[txHash] == false, "Transaction has been executed");
-        erc721TxHashUnlocked[txHash] = true;
-        require(erc721TokenInfoSupported[token], "This token is not supported");
-        ERC721TokenWrapped(token).mint(to, tokenId);
-        allERC721TxHash.push(txHash);
-        userERC721MintTxHash[to].push(txHash);
+        IBTCLayer2BridgeERC721(bridgeERC721Address).mintERC721Token(txHash, token, to, tokenId);
         emit MintERC721Token(txHash, token, to, tokenId);
     }
 
     function burnERC721Token(address token, uint256 tokenId) public payable {
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
-        require(erc721TokenInfoSupported[token], "This token is not supported");
-        require(ERC721TokenWrapped(token).ownerOf(tokenId) == msg.sender, "Illegal permissions");
-        ERC721TokenWrapped(token).burn(tokenId);
+        IBTCLayer2BridgeERC721(bridgeERC721Address).burnERC721Token(msg.sender, token, tokenId);
         (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
@@ -222,12 +181,12 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
         require(nativeTokenTxHashUnlocked[txHash] == false, "Transaction has been executed");
         nativeTokenTxHashUnlocked[txHash] = true;
+        allNativeTokenTxHash.push(txHash);
+        userNativeTokenMintTxHash[to].push(txHash);
         (bool success, ) = to.call{value: amount}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
-        allNativeTokenTxHash.push(txHash);
-        userNativeTokenMintTxHash[to].push(txHash);
         emit UnlockNativeToken(txHash, to, amount);
     }
 
@@ -243,19 +202,19 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function allERC20TokenAddressLength() public view returns(uint256) {
-        return allERC20TokenAddress.length;
+        return IBTCLayer2BridgeERC20(bridgeERC20Address).allERC20TokenAddressLength();
     }
 
     function allERC20TxHashLength() public view returns(uint256) {
-        return allERC20TxHash.length;
+        return IBTCLayer2BridgeERC20(bridgeERC20Address).allERC20TxHashLength();
     }
 
     function allERC721TokenAddressLength() public view returns(uint256) {
-        return allERC721TokenAddress.length;
+        return IBTCLayer2BridgeERC721(bridgeERC721Address).allERC721TokenAddressLength();
     }
 
     function allERC721TxHashLength() public view returns(uint256) {
-        return allERC721TxHash.length;
+        return IBTCLayer2BridgeERC721(bridgeERC721Address).allERC721TxHashLength();
     }
 
     function allNativeTokenTxHashLength() public view returns(uint256) {
@@ -263,11 +222,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function userERC20MintTxHashLength(address user) public view returns(uint256) {
-        return userERC20MintTxHash[user].length;
+        return IBTCLayer2BridgeERC20(bridgeERC20Address).userERC20MintTxHashLength(user);
     }
 
     function userERC721MintTxHashLength(address user) public view returns(uint256) {
-        return userERC721MintTxHash[user].length;
+        return IBTCLayer2BridgeERC721(bridgeERC721Address).userERC721MintTxHashLength(user);
     }
 
     function userNativeTokenMintTxHashLength(address user) public view returns(uint256) {
