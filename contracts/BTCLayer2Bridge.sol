@@ -45,7 +45,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     event BurnERC20Token(
         address token,
         address account,
-        uint256 amount
+        uint256 amount,
+        string destBtcAddr
     );
 
     event AddERC721TokenWrapped(
@@ -65,7 +66,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     event BurnERC721Token(
         address token,
         address account,
-        uint256 tokenId
+        uint256 tokenId,
+        string destBtcAddr
     );
 
     event UnlockNativeToken(
@@ -76,7 +78,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     event LockNativeToken(
         address account,
-        uint256 amount
+        uint256 amount,
+        string destBtcAddr
     );
 
     error EtherTransferFailed();
@@ -139,14 +142,14 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit MintERC20Token(txHash, token, to, amount);
     }
 
-    function burnERC20Token(address token, uint256 amount) public payable {
+    function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable {
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
         IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
         (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BurnERC20Token(token, msg.sender, amount);
+        emit BurnERC20Token(token, msg.sender, amount, destBtcAddr);
     }
 
     function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) public returns(address) {
@@ -167,14 +170,14 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit MintERC721Token(txHash, token, to, tokenId);
     }
 
-    function burnERC721Token(address token, uint256 tokenId) public payable {
+    function burnERC721Token(address token, uint256 tokenId, string memory destBtcAddr) public payable {
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
         IBTCLayer2BridgeERC721(bridgeERC721Address).burnERC721Token(msg.sender, token, tokenId);
         (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BurnERC721Token(token, msg.sender, tokenId);
+        emit BurnERC721Token(token, msg.sender, tokenId, destBtcAddr);
     }
 
     function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public {
@@ -190,7 +193,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit UnlockNativeToken(txHash, to, amount);
     }
 
-    function lockNativeToken() public payable {
+    function lockNativeToken(string memory destBtcAddr) public payable {
         require(msg.value > bridgeFee, "Insufficient cross-chain assets");
 
         (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
@@ -198,7 +201,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
             revert EtherTransferFailed();
         }
 
-        emit LockNativeToken(msg.sender, msg.value - bridgeFee);
+        emit LockNativeToken(msg.sender, msg.value - bridgeFee, destBtcAddr);
     }
 
     function allERC20TokenAddressLength() public view returns(uint256) {
