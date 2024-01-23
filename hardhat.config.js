@@ -3,6 +3,7 @@ require("@nomicfoundation/hardhat-toolbox");
 require('@openzeppelin/hardhat-upgrades');
 require('hardhat-dependency-compiler');
 require('hardhat-contract-sizer');
+require("@nomicfoundation/hardhat-verify");
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -24,5 +25,20 @@ module.exports = {
       url: `${process.env.NETWORK_URL}`,
       timeout: 2000000,
     },
+  },
+  etherscan: {
+    apiKey: {
+      btclayer2: "no-api-key-needed"
+    },
+    customChains: [
+      {
+        network: "btclayer2",
+        chainId: 686868,
+        urls: {
+          apiURL: `${process.env.EXPLORER_API_URL}`,
+          browserURL: `${process.env.EXPLORER_URL}`
+        }
+      }
+    ]
   }
 };

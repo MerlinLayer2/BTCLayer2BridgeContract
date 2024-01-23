@@ -17,6 +17,7 @@
   "scripts": {
     "compile": "npx hardhat compile && npx hardhat size-contracts",
     "deploy": "npx hardhat run scripts/deploy.js --network btclayer2",
+    "verify": "npx hardhat run scripts/verify.js --network btclayer2",
     "flatten": "npx hardhat flatten ./contracts/BTCLayer2Bridge.sol > FlattenedBTCLayer2Bridge.sol && npx hardhat flatten ./contracts/BTCLayer2BridgeERC20.sol > FlattenedBTCLayer2BridgeERC20.sol && npx hardhat flatten ./contracts/BTCLayer2BridgeERC721.sol > FlattenedBTCLayer2BridgeERC721.sol"
   },
   "dependencies": {
