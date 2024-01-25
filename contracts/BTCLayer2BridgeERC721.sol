@@ -14,6 +14,9 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     bytes32[] public allERC721TxHash;
     mapping(address => bytes32[]) public userERC721MintTxHash;
 
+    mapping(uint256 => bytes) public mpId2Number;
+    mapping(bytes => uint256) public mpNumber2Id;
+
     modifier onlyValidAddress(address addr) {
         require(addr != address(0), "Illegal address");
         _;
@@ -59,11 +62,25 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         ERC721TokenWrapped(token).setBaseURI(newBaseTokenURI);
     }
 
-    function mintERC721Token(bytes32 txHash, address token, address to, uint256 tokenId) external onlyBridge {
+    //tokenURI: id->number->tokenURI(number)
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        inscriptionNumber = tokenId;
+        require(mpNumber2Id[inscriptionNumber], "This inscriptionNumber is not exist");
+
+        inscriptionId = mpNumber2Id[inscriptionNumber];
+        return super.tokenURI(inscriptionId);
+    }
+
+    function mintERC721Token(bytes32 txHash, address token, address to, uint256 inscriptionId, bytes inscriptionNumber) external onlyBridge {
         require(erc721TxHashUnlocked[txHash] == false, "Transaction has been executed");
         erc721TxHashUnlocked[txHash] = true;
         require(erc721TokenInfoSupported[token], "This token is not supported");
         allERC721TxHash.push(txHash);
+
+        tokenId = inscriptionNumber;
+        mpId2Number[inscriptionId] = inscriptionNumber;
+        mpNumber2Id[inscriptionNumber] = inscriptionId;
+
         userERC721MintTxHash[to].push(txHash);
         ERC721TokenWrapped(token).mint(to, tokenId);
     }
@@ -71,6 +88,19 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     function burnERC721Token(address sender, address token, uint256 tokenId) external onlyBridge {
         require(erc721TokenInfoSupported[token], "This token is not supported");
         require(ERC721TokenWrapped(token).ownerOf(tokenId) == sender, "Illegal permissions");
+
+        require(erc721TokenInfoSupported[tokenId], "This inscription id is not supported");
+
+        ERC721TokenWrapped(token).burn(tokenId);
+    }
+
+    function burnERC721TokenByInscriptionId(address sender, address token, uint256 inscriptionId) external onlyBridge {
+        require(erc721TokenInfoSupported[token], "This token is not supported");
+        require(ERC721TokenWrapped(token).ownerOf(tokenId) == sender, "Illegal permissions");
+
+        require(erc721TokenInfoSupported[inscriptionId], "This inscription id is not supported");
+        tokenId = mpId2Number[inscriptionNumber];
+
         ERC721TokenWrapped(token).burn(tokenId);
     }
 
