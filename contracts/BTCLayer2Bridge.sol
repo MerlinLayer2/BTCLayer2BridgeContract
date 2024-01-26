@@ -33,6 +33,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         string name,
         string symbol,
         uint8 decimals
+        //todo supply
     );
 
     event MintERC20Token(
@@ -60,14 +61,18 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         bytes32 txHash,
         address token,
         address account,
-        uint256 tokenId
+        uint256 tokenId,
+        string[] memory inscriptionIds,
+        uint256[] memory inscriptionNumbers
     );
 
     event BurnERC721Token(
         address token,
         address account,
         uint256 tokenId,
-        string destBtcAddr
+        string destBtcAddr,
+        string[] memory inscriptionIds,
+        uint256[] memory inscriptionNumbers
     );
 
     event UnlockNativeToken(
@@ -164,20 +169,20 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         IBTCLayer2BridgeERC721(bridgeERC721Address).setBaseURI(token, newBaseTokenURI);
     }
 
-    function mintERC721Token(bytes32 txHash, address token, address to, uint256 tokenId) public {
+    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory inscriptionNumbers) public {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
-        IBTCLayer2BridgeERC721(bridgeERC721Address).mintERC721Token(txHash, token, to, tokenId);
-        emit MintERC721Token(txHash, token, to, tokenId);
+        IBTCLayer2BridgeERC721(bridgeERC721Address).mintERC721Token(txHash, token, inscriptionIds, inscriptionNumbers);
+        emit MintERC721Token(txHash, token, to, inscriptionIds, inscriptionNumbers);
     }
 
-    function burnERC721Token(address token, uint256 tokenId, string memory destBtcAddr) public payable {
+    function batchBurnERC721Token(address token, uint256 tokenId, string memory destBtcAddr, uint256[] memory inscriptionNumbers) public payable {
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
-        IBTCLayer2BridgeERC721(bridgeERC721Address).burnERC721Token(msg.sender, token, tokenId);
+        inscriptionIds = IBTCLayer2BridgeERC721(bridgeERC721Address).burnERC721Token(msg.sender, token, tokenId, inscriptionNumbers);
         (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BurnERC721Token(token, msg.sender, tokenId, destBtcAddr);
+        emit BurnERC721Token(token, msg.sender, tokenId, destBtcAddr, inscriptionNumbers, inscriptionIds);
     }
 
     function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public {
