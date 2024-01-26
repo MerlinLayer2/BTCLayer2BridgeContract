@@ -32,8 +32,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address tokenWrappedAddress,
         string name,
         string symbol,
-        uint8 decimals
-        //todo supply
+        uint8 decimals,
+        uint256 cap
     );
 
     event MintERC20Token(
@@ -134,10 +134,10 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         unlockTokenAdminAddressSupported[_account] = true;
     }
 
-    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals) public returns(address) {
+    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) public returns(address) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        address tokenWrappedAddress = IBTCLayer2BridgeERC20(bridgeERC20Address).addERC20TokenWrapped(_name, _symbol, _decimals);
-        emit AddERC20TokenWrapped(tokenWrappedAddress, _name, _symbol, _decimals);
+        address tokenWrappedAddress = IBTCLayer2BridgeERC20(bridgeERC20Address).addERC20TokenWrapped(_name, _symbol, _decimals, _cap);
+        emit AddERC20TokenWrapped(tokenWrappedAddress, _name, _symbol, _decimals, _cap);
         return tokenWrappedAddress;
     }
 

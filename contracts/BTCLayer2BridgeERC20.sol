@@ -37,16 +37,16 @@ contract BTCLayer2BridgeERC20 is OwnableUpgradeable {
         __Ownable_init_unchained(_initialOwner);
     }
 
-    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals) external onlyBridge returns(address)  {
+    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) external onlyBridge returns(address)  {
         bytes32 tokenInfoHash = keccak256(
-            abi.encodePacked(_name, _symbol, _decimals)
+            abi.encodePacked(_name, _symbol, _decimals, _cap)
         );
         address wrappedToken = erc20TokenInfoToWrappedToken[tokenInfoHash];
         require(wrappedToken == address(0), "The current token already exists");
         // Create a new wrapped erc20 using create2
         ERC20TokenWrapped newWrappedToken = (new ERC20TokenWrapped){
                 salt: tokenInfoHash
-            }(_name, _symbol, _decimals);
+            }(_name, _symbol, _decimals, _cap);
         // Create mappings
         address tokenWrappedAddress = address(newWrappedToken);
         erc20TokenInfoToWrappedToken[tokenInfoHash] = tokenWrappedAddress;
