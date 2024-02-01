@@ -9,6 +9,9 @@ contract ERC721TokenWrapped is ERC721Enumerable {
     address public immutable bridgeAddress;
     string private _baseTokenURI;
 
+    mapping(string => uint256) public mpId2Number;
+    mapping(uint256 => string) public mpNumber2Id;
+
     modifier onlyBridge() {
         require(
             msg.sender == bridgeAddress,
@@ -26,13 +29,23 @@ contract ERC721TokenWrapped is ERC721Enumerable {
         _baseTokenURI = baseTokenURI;
     }
 
-    function mint(address to, uint256 tokenId) external onlyBridge {
-        _mint(to, tokenId);
+    function mint(address to, uint256 inscriptionNumber, string memory inscriptionId) external onlyBridge {
+        mpId2Number[inscriptionId] = inscriptionNumber;
+        mpNumber2Id[inscriptionNumber] = inscriptionId;
+
+        _mint(to, inscriptionNumber);
     }
 
     // Notice that is not require to approve wrapped tokens to use the bridge
-    function burn(uint256 tokenId) external onlyBridge {
-        _burn(tokenId);
+    function burn(address sender, uint256 inscriptionNumber) external onlyBridge returns(string memory){
+        require(_ownerOf(inscriptionNumber) == sender, "Illegal permissions");
+        string memory inscriptionId = mpNumber2Id[inscriptionNumber];
+
+        delete mpId2Number[inscriptionId];
+        delete mpNumber2Id[inscriptionNumber];
+
+        _burn(inscriptionNumber);
+        return inscriptionId;
     }
 
     function _baseURI() internal view virtual override returns (string memory) {
@@ -45,5 +58,12 @@ contract ERC721TokenWrapped is ERC721Enumerable {
 
     function setBaseURI(string calldata newBaseTokenURI) external onlyBridge {
         _baseTokenURI = newBaseTokenURI;
+    }
+
+    function tokenURI(uint256 inscriptionNumber) public view override virtual returns (string memory) {
+        string memory inscriptionId = mpNumber2Id[inscriptionNumber];
+
+        string memory baseURI = ERC721._baseURI();
+        return bytes(baseURI).length > 0 ? string.concat(baseURI, inscriptionId) : "";
     }
 }
