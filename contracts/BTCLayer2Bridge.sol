@@ -32,7 +32,16 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address tokenWrappedAddress,
         string name,
         string symbol,
-        uint8 decimals
+        uint8 decimals,
+        uint256 cap
+    );
+
+    event SetNormalAdminAddress(
+        address account
+    );
+
+    event AddUnlockTokenAdminAddress(
+        address account
     );
 
     event MintERC20Token(
@@ -56,18 +65,25 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         string baseURI
     );
 
-    event MintERC721Token(
+    event SetBaseURI(
+        address token,
+        string newBaseTokenURI
+    );
+
+    event BatchMintERC721Token(
         bytes32 txHash,
         address token,
         address account,
-        uint256 tokenId
+        uint256[] inscriptionNumbers,
+        string[] inscriptionIds
     );
 
-    event BurnERC721Token(
+    event BatchBurnERC721Token(
         address token,
         address account,
-        uint256 tokenId,
-        string destBtcAddr
+        string destBtcAddr,
+        uint256[] inscriptionNumbers,
+        string[] inscriptionIds
     );
 
     event UnlockNativeToken(
@@ -80,6 +96,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address account,
         uint256 amount,
         string destBtcAddr
+    );
+
+    event SetBridgeSettingsFee(
+        address feeAddress,
+        uint256 bridgeFee
     );
 
     error EtherTransferFailed();
@@ -120,6 +141,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     function setNormalAdminAddress(address _account) public onlyValidAddress(_account) {
         require(msg.sender == superAdminAddress, "Illegal permissions");
         normalAdminAddress = _account;
+        emit SetNormalAdminAddress(_account);
     }
 
     function addUnlockTokenAdminAddress(address _account) public onlyValidAddress(_account) {
@@ -127,12 +149,13 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         require(unlockTokenAdminAddressSupported[_account] == false, "Current address has been added");
         unlockTokenAdminAddressList.push(_account);
         unlockTokenAdminAddressSupported[_account] = true;
+        emit AddUnlockTokenAdminAddress(_account);
     }
 
-    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals) public returns(address) {
+    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) public returns(address) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        address tokenWrappedAddress = IBTCLayer2BridgeERC20(bridgeERC20Address).addERC20TokenWrapped(_name, _symbol, _decimals);
-        emit AddERC20TokenWrapped(tokenWrappedAddress, _name, _symbol, _decimals);
+        address tokenWrappedAddress = IBTCLayer2BridgeERC20(bridgeERC20Address).addERC20TokenWrapped(_name, _symbol, _decimals, _cap);
+        emit AddERC20TokenWrapped(tokenWrappedAddress, _name, _symbol, _decimals, _cap);
         return tokenWrappedAddress;
     }
 
@@ -162,26 +185,38 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     function setBaseURI(address token, string calldata newBaseTokenURI) public {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         IBTCLayer2BridgeERC721(bridgeERC721Address).setBaseURI(token, newBaseTokenURI);
+        emit SetBaseURI(token, newBaseTokenURI);
     }
 
-    function mintERC721Token(bytes32 txHash, address token, address to, uint256 tokenId) public {
+    function tokenURI(address token, uint256 inscriptionNumber) public returns (string memory) {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, inscriptionNumber);
+    }
+
+    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory inscriptionNumbers) public {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
-        IBTCLayer2BridgeERC721(bridgeERC721Address).mintERC721Token(txHash, token, to, tokenId);
-        emit MintERC721Token(txHash, token, to, tokenId);
+        require(inscriptionIds.length <= 100, "inscriptionIds's length is too many");
+
+        IBTCLayer2BridgeERC721(bridgeERC721Address).batchMintERC721Token(txHash, token, to, inscriptionIds, inscriptionNumbers);
+        emit BatchMintERC721Token(txHash, token, to, inscriptionNumbers, inscriptionIds);
     }
 
-    function burnERC721Token(address token, uint256 tokenId, string memory destBtcAddr) public payable {
+    function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory inscriptionNumbers) public payable {
+        require(inscriptionNumbers.length <= 100, "inscriptionNumbers's length is too many");
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
-        IBTCLayer2BridgeERC721(bridgeERC721Address).burnERC721Token(msg.sender, token, tokenId);
+
+        string[] memory inscriptionIds;
+        inscriptionIds = IBTCLayer2BridgeERC721(bridgeERC721Address).batchBurnERC721Token(msg.sender, token, inscriptionNumbers);
         (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BurnERC721Token(token, msg.sender, tokenId, destBtcAddr);
+        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, inscriptionNumbers, inscriptionIds);
     }
 
     function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
+        require(to != address(0x0), "to address is zero address");
         require(nativeTokenTxHashUnlocked[txHash] == false, "Transaction has been executed");
         nativeTokenTxHashUnlocked[txHash] = true;
         allNativeTokenTxHash.push(txHash);
@@ -245,5 +280,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         if (_bridgeFee > 0) {
             bridgeFee = _bridgeFee;
         }
+
+        emit SetBridgeSettingsFee(_feeAddress, _bridgeFee);
     }
 }

@@ -39,6 +39,10 @@ contract ERC721TokenWrapped is ERC721Enumerable {
         return _baseTokenURI;
     }
 
+    function getBaseURI() external view returns (string memory) {
+        return _baseTokenURI;
+    }
+
     function setBaseURI(string calldata newBaseTokenURI) external onlyBridge {
         _baseTokenURI = newBaseTokenURI;
     }

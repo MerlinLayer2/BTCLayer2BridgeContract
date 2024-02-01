@@ -14,6 +14,9 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     bytes32[] public allERC721TxHash;
     mapping(address => bytes32[]) public userERC721MintTxHash;
 
+    mapping(string => uint256) public mpId2Number;
+    mapping(uint256 => string) public mpNumber2Id;
+
     modifier onlyValidAddress(address addr) {
         require(addr != address(0), "Illegal address");
         _;
@@ -59,19 +62,56 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         ERC721TokenWrapped(token).setBaseURI(newBaseTokenURI);
     }
 
-    function mintERC721Token(bytes32 txHash, address token, address to, uint256 tokenId) external onlyBridge {
+    //tokenURI: id->number->tokenURI(number)
+    function tokenURI(address token, uint256 inscriptionNumber) public view returns (string memory) {
+        require(inscriptionNumber>=1, "This inscriptionNumber is not exist");
+        string memory inscriptionId = mpNumber2Id[inscriptionNumber];
+        return string.concat(ERC721TokenWrapped(token).getBaseURI(), inscriptionId);
+    }
+
+    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory inscriptionNumbers) external onlyBridge {
+        require(inscriptionIds.length == inscriptionNumbers.length, "length is not match.");
+        require(inscriptionIds.length <= 100, "inscriptionIds's length is too many");
+
         require(erc721TxHashUnlocked[txHash] == false, "Transaction has been executed");
         erc721TxHashUnlocked[txHash] = true;
         require(erc721TokenInfoSupported[token], "This token is not supported");
         allERC721TxHash.push(txHash);
+
         userERC721MintTxHash[to].push(txHash);
-        ERC721TokenWrapped(token).mint(to, tokenId);
+
+        //batch mint
+        for (uint16 i=0; i<inscriptionNumbers.length; i++) {
+            uint256 inscriptionNumber = inscriptionNumbers[i];
+            string memory inscriptionId = inscriptionIds[i];
+
+            mpId2Number[inscriptionId] = inscriptionNumber;
+            mpNumber2Id[inscriptionNumber] = inscriptionId;
+
+            ERC721TokenWrapped(token).mint(to, inscriptionNumber);
+        }
     }
 
-    function burnERC721Token(address sender, address token, uint256 tokenId) external onlyBridge {
+    function batchBurnERC721Token(address sender, address token, uint256[] memory inscriptionNumbers) external onlyBridge returns(string[] memory) {
         require(erc721TokenInfoSupported[token], "This token is not supported");
-        require(ERC721TokenWrapped(token).ownerOf(tokenId) == sender, "Illegal permissions");
-        ERC721TokenWrapped(token).burn(tokenId);
+        require(inscriptionNumbers.length <= 100, "inscriptionNumbers's length is too many");
+
+        string[] memory burnInscriptionIds = new string[](inscriptionNumbers.length);
+
+        //batch burn
+        for (uint16 i=0; i<inscriptionNumbers.length; i++) {
+            uint256 inscriptionNumber = inscriptionNumbers[i];
+            require(ERC721TokenWrapped(token).ownerOf(inscriptionNumber) == sender, "Illegal permissions");
+            string memory inscriptionId = mpNumber2Id[inscriptionNumber];
+
+            delete mpId2Number[inscriptionId];
+            delete mpNumber2Id[inscriptionNumber];
+
+            burnInscriptionIds[i] = inscriptionId;
+            ERC721TokenWrapped(token).burn(inscriptionNumber);
+        }
+
+        return burnInscriptionIds;
     }
 
     function allERC721TokenAddressLength() public view returns(uint256) {

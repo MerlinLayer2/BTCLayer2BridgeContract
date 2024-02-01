@@ -3,8 +3,9 @@
 pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 
-contract ERC20TokenWrapped is ERC20Permit {
+contract ERC20TokenWrapped is ERC20Permit, ERC20Capped {
     // PolygonZkEVM Bridge address
     address public immutable bridgeAddress;
 
@@ -22,8 +23,9 @@ contract ERC20TokenWrapped is ERC20Permit {
     constructor(
         string memory name,
         string memory symbol,
-        uint8 __decimals
-    ) ERC20(name, symbol) ERC20Permit(name) {
+        uint8 __decimals,
+        uint256 __cap
+    ) ERC20(name, symbol) ERC20Permit(name) ERC20Capped(__cap){
         bridgeAddress = msg.sender;
         _decimals = __decimals;
     }
@@ -39,5 +41,9 @@ contract ERC20TokenWrapped is ERC20Permit {
 
     function decimals() public view virtual override returns (uint8) {
         return _decimals;
+    }
+
+    function _update(address from, address to, uint256 value) override(ERC20, ERC20Capped) internal virtual {
+        ERC20Capped._update(from, to, value);
     }
 }
