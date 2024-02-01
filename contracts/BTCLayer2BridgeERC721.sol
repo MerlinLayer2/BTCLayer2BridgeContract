@@ -113,7 +113,7 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         require(inscriptionNumbers.length <= 100, "inscriptionNumbers's length is too many");
 
         //check param is repeat or already exists（inscriptionIds + inscriptionNumbers）
-        mapping(uint256 => bool) mapNumber;
+        mapping(uint256 => bool) memory mapNumber;
         for (uint16 i=0; i<inscriptionNumbers.length; i++) {
             uint256 inscriptionNumber = inscriptionNumbers[i];
             require(ERC721TokenWrapped(token).ownerOf(inscriptionNumber) == sender, "Illegal permissions");
@@ -123,6 +123,8 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
 
             uint256 already = mpNumber2Id[inscriptionNumber];
             require(already, "tokenId to burn not exists!");
+
+            mapNumber[inscriptionNumber] = true;
         }
 
         //batch burn
