@@ -1,0 +1,5 @@
+{
+ "bTCLayer2BridgeDeployContract": "0x08F8a1C73Cef354f7FB088DE34dAd1874c7A1501",
+ "bTCLayer2BridgeERC20DeployContract": "0x0425FbE08BE99256a5aD6C2780f46dCCE80f963F",
+ "bTCLayer2BridgeERC721DeployContract": "0xEa023371BEDBE18eAf356d134a1fAc11c555D3b6"
+}
