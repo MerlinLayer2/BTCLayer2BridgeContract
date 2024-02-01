@@ -37,7 +37,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     );
 
     event SetNormalAdminAddress(
-        address _account
+        address account
     );
 
     event AddUnlockTokenAdminAddress(
@@ -99,8 +99,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     );
 
     event SetBridgeSettingsFee(
-        address _feeAddress,
-        uint256 _bridgeFee
+        address feeAddress,
+        uint256 bridgeFee
     );
 
     error EtherTransferFailed();
