@@ -33,6 +33,16 @@ contract BTCLayer2BridgeERC20 is OwnableUpgradeable {
     ) external onlyValidAddress(_initialOwner)
     onlyValidAddress(_bridgeAddress) virtual initializer {
         bridgeAddress = _bridgeAddress;
+
+        erc20TokenInfoSupported[0x7EC0D630c5c6164d9765e5b8931e9A01fC28E2E0] = true;
+        allERC20TokenAddress.push(0x7EC0D630c5c6164d9765e5b8931e9A01fC28E2E0);
+
+        erc20TokenInfoSupported[0x3dc3793F6Ce649934D826D97577DC4ae5B890A50] = true;
+        allERC20TokenAddress.push(0x3dc3793F6Ce649934D826D97577DC4ae5B890A50);
+
+        erc20TokenInfoSupported[0xccE1320B40E5c5155798c3D5ddcfd7e7E1C1470F] = true;
+        allERC20TokenAddress.push(0xccE1320B40E5c5155798c3D5ddcfd7e7E1C1470F);
+
         // Initialize OZ contracts
         __Ownable_init_unchained(_initialOwner);
     }
