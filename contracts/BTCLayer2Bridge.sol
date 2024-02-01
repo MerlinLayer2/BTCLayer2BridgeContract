@@ -70,7 +70,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         string newBaseTokenURI
     );
 
-    event MintERC721Token(
+    event BatchMintERC721Token(
         bytes32 txHash,
         address token,
         address account,
@@ -78,7 +78,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         string[] inscriptionIds
     );
 
-    event BurnERC721Token(
+    event BatchBurnERC721Token(
         address token,
         address account,
         string destBtcAddr,
@@ -188,12 +188,17 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit SetBaseURI(token, newBaseTokenURI);
     }
 
+    function tokenURI(address token, uint256 inscriptionNumber) public returns (string memory) {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, inscriptionNumber);
+    }
+
     function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory inscriptionNumbers) public {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
         require(inscriptionIds.length <= 100, "inscriptionIds's length is too many");
 
         IBTCLayer2BridgeERC721(bridgeERC721Address).batchMintERC721Token(txHash, token, to, inscriptionIds, inscriptionNumbers);
-        emit MintERC721Token(txHash, token, to, inscriptionNumbers, inscriptionIds);
+        emit BatchMintERC721Token(txHash, token, to, inscriptionNumbers, inscriptionIds);
     }
 
     function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory inscriptionNumbers) public payable {
@@ -206,7 +211,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BurnERC721Token(token, msg.sender, destBtcAddr, inscriptionNumbers, inscriptionIds);
+        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, inscriptionNumbers, inscriptionIds);
     }
 
     function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public {
