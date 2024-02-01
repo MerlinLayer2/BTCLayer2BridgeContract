@@ -14,8 +14,8 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     bytes32[] public allERC721TxHash;
     mapping(address => bytes32[]) public userERC721MintTxHash;
 
-    mapping(bytes => uint256) public mpId2Number;
-    mapping(uint256 => bytes) public mpNumber2Id;
+    mapping(string => uint256) public mpId2Number;
+    mapping(uint256 => string) public mpNumber2Id;
 
     modifier onlyValidAddress(address addr) {
         require(addr != address(0), "Illegal address");
@@ -63,9 +63,11 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     }
 
     //tokenURI: id->number->tokenURI(number)
-    function tokenURI(uint256 inscriptionNumber) public view virtual override returns (string memory) {
+    function _tokenURI(address token, uint256 inscriptionNumber) public view returns (string memory) {
         require(inscriptionNumber>=1, "This inscriptionNumber is not exist");
-        return super.tokenURI(mpNumber2Id[inscriptionNumber]);
+
+        string memory inscriptionId = mpNumber2Id[inscriptionNumber];
+        return  string.concat(ERC721TokenWrapped(token).getBaseURI(), inscriptionId);
     }
 
     function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory inscriptionNumbers) external onlyBridge {
@@ -79,23 +81,6 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
 
         userERC721MintTxHash[to].push(txHash);
 
-        //check param is repeat or already exists（inscriptionIds + inscriptionNumbers）
-        mapping(uint256 => bool) memory  mapNumber;
-        mapping(string => bool) memory mapId;
-        for (uint16 i=0; i<inscriptionNumbers.length; i++) {
-            uint256 inscriptionNumber = inscriptionNumbers[i];
-            string memory inscriptionId = inscriptionIds[i];
-
-            bool paraRepeat = mapNumber[inscriptionNumber] || mapId[inscriptionId];
-            require(!paraRepeat, "tokenId to mint is repeat!");
-
-            bool already = mpNumber2Id[inscriptionNumber] || mpId2Number[inscriptionId];
-            require(!already, "tokenId to mint already exists!");
-
-            mapNumber[inscriptionNumber] = true;
-            mapId[inscriptionId] = true;
-         }
-
         //batch mint
         for (uint16 i=0; i<inscriptionNumbers.length; i++) {
             uint256 inscriptionNumber = inscriptionNumbers[i];
@@ -108,34 +93,22 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         }
     }
 
-    function batchBurnERC721Token(address sender, address token, uint256[] memory inscriptionNumbers) external onlyBridge returns(string[] memory burnInscriptionIds) {
+    function batchBurnERC721Token(address sender, address token, uint256[] memory inscriptionNumbers) external onlyBridge returns(string[] memory) {
         require(erc721TokenInfoSupported[token], "This token is not supported");
         require(inscriptionNumbers.length <= 100, "inscriptionNumbers's length is too many");
 
-        //check param is repeat or already exists（inscriptionIds + inscriptionNumbers）
-        mapping(uint256 => bool) memory mapNumber;
-        for (uint16 i=0; i<inscriptionNumbers.length; i++) {
-            uint256 inscriptionNumber = inscriptionNumbers[i];
-            require(ERC721TokenWrapped(token).ownerOf(inscriptionNumber) == sender, "Illegal permissions");
-
-            bool paraRepeat = mapNumber[inscriptionNumber];
-            require(!paraRepeat, "tokenId to burn is repeat!");
-
-            uint256 already = mpNumber2Id[inscriptionNumber];
-            require(already, "tokenId to burn not exists!");
-
-            mapNumber[inscriptionNumber] = true;
-        }
+        string[] memory burnInscriptionIds = new string[](inscriptionNumbers.length);
 
         //batch burn
         for (uint16 i=0; i<inscriptionNumbers.length; i++) {
             uint256 inscriptionNumber = inscriptionNumbers[i];
-            uint256 inscriptionId = mpNumber2Id[inscriptionNumber];
+            require(ERC721TokenWrapped(token).ownerOf(inscriptionNumber) == sender, "Illegal permissions");
+            string memory inscriptionId = mpNumber2Id[inscriptionNumber];
 
             delete mpId2Number[inscriptionId];
             delete mpNumber2Id[inscriptionNumber];
 
-            burnInscriptionIds.push(inscriptionId);
+            burnInscriptionIds[i] = inscriptionId;
             ERC721TokenWrapped(token).burn(inscriptionNumber);
         }
 

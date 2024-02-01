@@ -196,7 +196,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit MintERC721Token(txHash, token, to, inscriptionNumbers, inscriptionIds);
     }
 
-    function batchBurnERC721Token(address token, uint256 tokenId, string memory destBtcAddr, uint256[] memory inscriptionNumbers) public payable {
+    function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory inscriptionNumbers) public payable {
         require(inscriptionNumbers.length <= 100, "inscriptionNumbers's length is too many");
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
 
