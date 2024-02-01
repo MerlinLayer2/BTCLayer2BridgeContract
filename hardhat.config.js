@@ -24,7 +24,8 @@ module.exports = {
     btclayer2: {
       url: `${process.env.NETWORK_URL}`,
       timeout: 2000000,
-    },
+      accounts: [`${process.env.PRIVATE_KEY}`]
+    }
   },
   etherscan: {
     apiKey: {
