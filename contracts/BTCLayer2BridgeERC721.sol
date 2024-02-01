@@ -63,9 +63,9 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     }
 
     //tokenURI: id->number->tokenURI(number)
-    function tokenURI(uint256 inscriptionNumber) public view virtual override returns (string memory) {
+    function tokenURI(uint256 inscriptionNumber) public view virtual returns (string memory) {
         require(inscriptionNumber>=1, "This inscriptionNumber is not exist");
-        return super.tokenURI(mpNumber2Id[inscriptionNumber]);
+        return _tokenURI(mpNumber2Id[inscriptionNumber]); //???
     }
 
     function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory inscriptionNumbers) external onlyBridge {
@@ -80,7 +80,7 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         userERC721MintTxHash[to].push(txHash);
 
         //check param is repeat or already exists（inscriptionIds + inscriptionNumbers）
-        mapping(uint256 => bool) memory mapNumber;
+        mapping(uint256 => bool) memory  mapNumber;
         mapping(string => bool) memory mapId;
         for (uint16 i=0; i<inscriptionNumbers.length; i++) {
             uint256 inscriptionNumber = inscriptionNumbers[i];
@@ -91,6 +91,9 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
 
             bool already = mpNumber2Id[inscriptionNumber] || mpId2Number[inscriptionId];
             require(!already, "tokenId to mint already exists!");
+
+            mapNumber[inscriptionNumber] = true;
+            mapId[inscriptionId] = true;
          }
 
         //batch mint
@@ -110,12 +113,12 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         require(inscriptionNumbers.length <= 100, "inscriptionNumbers's length is too many");
 
         //check param is repeat or already exists（inscriptionIds + inscriptionNumbers）
-        mapping(uint256 => bool) memory mapNumber;
+        mapping(uint256 => bool) mapNumber;
         for (uint16 i=0; i<inscriptionNumbers.length; i++) {
             uint256 inscriptionNumber = inscriptionNumbers[i];
             require(ERC721TokenWrapped(token).ownerOf(inscriptionNumber) == sender, "Illegal permissions");
 
-            string memory paraRepeat = mapNumber[inscriptionNumber];
+            bool paraRepeat = mapNumber[inscriptionNumber];
             require(!paraRepeat, "tokenId to burn is repeat!");
 
             uint256 already = mpNumber2Id[inscriptionNumber];
