@@ -62,8 +62,6 @@ contract ERC721TokenWrapped is ERC721Enumerable {
 
     function tokenURI(uint256 inscriptionNumber) public view override virtual returns (string memory) {
         string memory inscriptionId = mpNumber2Id[inscriptionNumber];
-
-        string memory baseURI = ERC721._baseURI();
-        return bytes(baseURI).length > 0 ? string.concat(baseURI, inscriptionId) : "";
+        return bytes(_baseTokenURI).length > 0 ? string.concat(_baseTokenURI, inscriptionId) : "";
     }
 }
