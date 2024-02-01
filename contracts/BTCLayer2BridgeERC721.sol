@@ -63,9 +63,9 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     }
 
     //tokenURI: id->number->tokenURI(number)
-    function tokenURI(uint256 inscriptionNumber) public view virtual returns (string memory) {
+    function tokenURI(uint256 inscriptionNumber) public view virtual override returns (string memory) {
         require(inscriptionNumber>=1, "This inscriptionNumber is not exist");
-        return _tokenURI(mpNumber2Id[inscriptionNumber]); //???
+        return super.tokenURI(mpNumber2Id[inscriptionNumber]);
     }
 
     function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory inscriptionNumbers) external onlyBridge {
