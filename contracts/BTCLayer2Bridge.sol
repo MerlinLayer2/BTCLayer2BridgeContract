@@ -44,6 +44,10 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address account
     );
 
+    event DelUnlockTokenAdminAddress(
+        address account
+    );
+
     event MintERC20Token(
         bytes32 txHash,
         address token,
@@ -150,6 +154,13 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         unlockTokenAdminAddressList.push(_account);
         unlockTokenAdminAddressSupported[_account] = true;
         emit AddUnlockTokenAdminAddress(_account);
+    }
+
+    function delUnlockTokenAdminAddress(address _account) public onlyValidAddress(_account) {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        require(unlockTokenAdminAddressSupported[_account] == true, "Current address is not exist");
+        unlockTokenAdminAddressSupported[_account] = false;
+        emit DelUnlockTokenAdminAddress(_account);
     }
 
     function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) public returns(address) {
