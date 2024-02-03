@@ -4,6 +4,7 @@ require('@openzeppelin/hardhat-upgrades');
 require('hardhat-dependency-compiler');
 require('hardhat-contract-sizer');
 require("@nomicfoundation/hardhat-verify");
+const {toNumber} = require("ethers");
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -34,7 +35,7 @@ module.exports = {
     customChains: [
       {
         network: "btclayer2",
-        chainId: 686868,
+        chainId: toNumber(`${process.env.CHAIN_ID}`),
         urls: {
           apiURL: `${process.env.EXPLORER_API_URL}`,
           browserURL: `${process.env.EXPLORER_URL}`

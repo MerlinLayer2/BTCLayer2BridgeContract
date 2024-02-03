@@ -11,3 +11,6 @@ cache
 artifacts
 .openzeppelin
 
+.env-test
+.env-pre-production
+

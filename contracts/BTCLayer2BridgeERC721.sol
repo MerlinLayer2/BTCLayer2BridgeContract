@@ -14,6 +14,8 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     bytes32[] public allERC721TxHash;
     mapping(address => bytes32[]) public userERC721MintTxHash;
 
+    string public constant version = "1.0";
+
     modifier onlyValidAddress(address addr) {
         require(addr != address(0), "Illegal address");
         _;
