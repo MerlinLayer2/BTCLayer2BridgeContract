@@ -23,6 +23,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     uint256 public bridgeFee;
     address public feeAddress;
 
+    string public constant version = "1.0";
+
     event SuperAdminAddressChanged(
         address oldAddress,
         address newAddress
