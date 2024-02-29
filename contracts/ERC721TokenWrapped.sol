@@ -30,6 +30,7 @@ contract ERC721TokenWrapped is ERC721Enumerable {
     }
 
     function mint(address to, uint256 inscriptionNumber, string memory inscriptionId) external onlyBridge {
+        //adjust exist
         mpId2Number[inscriptionId] = inscriptionNumber;
         mpNumber2Id[inscriptionNumber] = inscriptionId;
 
@@ -41,6 +42,7 @@ contract ERC721TokenWrapped is ERC721Enumerable {
         require(_ownerOf(inscriptionNumber) == sender, "Illegal permissions");
         string memory inscriptionId = mpNumber2Id[inscriptionNumber];
 
+        //adjust exist
         delete mpId2Number[inscriptionId];
         delete mpNumber2Id[inscriptionNumber];
 

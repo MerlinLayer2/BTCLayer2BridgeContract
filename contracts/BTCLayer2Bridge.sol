@@ -77,7 +77,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
         address token,
         address account,
         uint256 amount,
-        string destBtcAddr
+        string destBtcAddr,
+        uint256 bridgeFee
     );
 
     event AddERC721TokenWrapped(
@@ -105,7 +106,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
         address account,
         string destBtcAddr,
         uint256[] inscriptionNumbers,
-        string[] inscriptionIds
+        string[] inscriptionIds,
+        uint256 bridgeFee
     );
 
     event UnlockNativeToken(
@@ -117,12 +119,15 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
     event LockNativeToken(
         address account,
         uint256 amount,
-        string destBtcAddr
+        string destBtcAddr,
+        uint256 bridgeFee
     );
 
     event SetBridgeSettingsFee(
         address feeAddress,
-        uint256 bridgeFee
+        uint256 bridgeFee,
+        address feeAddressOld,
+        uint256 bridgeFeeOld
     );
 
     error EtherTransferFailed();
@@ -201,7 +206,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BurnERC20Token(token, msg.sender, amount, destBtcAddr);
+        emit BurnERC20Token(token, msg.sender, amount, destBtcAddr, bridgeFee);
     }
 
     function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) public returns(address) {
@@ -240,7 +245,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, inscriptionNumbers, inscriptionIds);
+        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, inscriptionNumbers, inscriptionIds, bridgeFee);
     }
 
     function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public whenNotPaused {
@@ -265,7 +270,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
             revert EtherTransferFailed();
         }
 
-        emit LockNativeToken(msg.sender, msg.value - bridgeFee, destBtcAddr);
+        emit LockNativeToken(msg.sender, msg.value - bridgeFee, destBtcAddr, bridgeFee);
     }
 
     function allERC20TokenAddressLength() public view returns(uint256) {
@@ -303,6 +308,9 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
     function setBridgeSettingsFee(address _feeAddress, uint256 _bridgeFee) external {
         require(msg.sender == superAdminAddress, "Illegal permissions");
 
+        address feeAddressOld = feeAddress;
+        uint256 bridgeFeeOld = bridgeFee;
+
         if (_feeAddress != address(0)) {
             feeAddress = _feeAddress;
         }
@@ -310,7 +318,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
             bridgeFee = _bridgeFee;
         }
 
-        emit SetBridgeSettingsFee(_feeAddress, _bridgeFee);
+        emit SetBridgeSettingsFee(_feeAddress, _bridgeFee, feeAddressOld, bridgeFeeOld);
     }
 
     function setPauseAdminAddress(address _account) public onlyValidAddress(_account) {
