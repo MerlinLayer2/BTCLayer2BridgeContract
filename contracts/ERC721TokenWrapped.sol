@@ -31,15 +31,20 @@ contract ERC721TokenWrapped is ERC721Enumerable {
 
     function mint(address to, uint256 inscriptionNumber, string memory inscriptionId) external onlyBridge {
         //adjust exist
+        require(mpId2Number[inscriptionId]==0, "inscriptionId is repeat");
+        require(string.length(mpNumber2Id[inscriptionNumber])==0, "inscriptionNumber is repeat");
+
         mpId2Number[inscriptionId] = inscriptionNumber;
         mpNumber2Id[inscriptionNumber] = inscriptionId;
 
-        _mint(to, inscriptionNumber);
+        _safeMint(to, inscriptionNumber);
     }
 
     // Notice that is not require to approve wrapped tokens to use the bridge
     function burn(address sender, uint256 inscriptionNumber) external onlyBridge returns(string memory){
         require(_ownerOf(inscriptionNumber) == sender, "Illegal permissions");
+        require(string.length(mpNumber2Id[inscriptionNumber])>0, "inscriptionNumber is not exist");
+
         string memory inscriptionId = mpNumber2Id[inscriptionNumber];
 
         //adjust exist

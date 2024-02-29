@@ -183,6 +183,15 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         require(unlockTokenAdminAddressSupported[_account] == true, "Current address is not exist");
         unlockTokenAdminAddressSupported[_account] = false;
+
+        uint16 i = 0;
+        for(i=0; i<len(unlockTokenAdminAddressList); i++) {
+            if(unlockTokenAdminAddressList[i] == _account) {
+                break
+            }
+        }
+        delete unlockTokenAdminAddressList[i];
+
         emit DelUnlockTokenAdminAddress(_account);
     }
 
@@ -222,8 +231,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
         emit SetBaseURI(token, newBaseTokenURI);
     }
 
-    function tokenURI(address token, uint256 inscriptionNumber) public returns (string memory) {
-        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+    function tokenURI(address token, uint256 inscriptionNumber) public view returns (string memory) {
         return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, inscriptionNumber);
     }
 
