@@ -321,13 +321,13 @@ contract BTCLayer2Bridge is OwnableUpgradeable, PausableUpgradeable {
     }
 
     function pause() public whenNotPaused {
-        require(msg.sender == pauseAdminAddress, "Illegal pause permissions");
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress || msg.sender == pauseAdminAddress, "Illegal pause permissions");
         _pause();
         emit PauseEvent(msg.sender);
     }
 
     function unpause() public whenPaused {
-        require(msg.sender == pauseAdminAddress, "Illegal pause permissions");
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress || msg.sender == pauseAdminAddress, "Illegal pause permissions");
         _unpause();
         emit UnpauseEvent(msg.sender);
     }
