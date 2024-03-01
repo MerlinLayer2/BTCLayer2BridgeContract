@@ -37,7 +37,7 @@ contract ERC721TokenWrapped is ERC721Enumerable {
         mpId2Number[inscriptionId] = inscriptionNumber;
         mpNumber2Id[inscriptionNumber] = inscriptionId;
 
-        _safeMint(to, inscriptionNumber);
+        _mint(to, inscriptionNumber);
     }
 
     // Notice that is not require to approve wrapped tokens to use the bridge
