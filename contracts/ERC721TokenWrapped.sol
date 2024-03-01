@@ -29,29 +29,29 @@ contract ERC721TokenWrapped is ERC721Enumerable {
         _baseTokenURI = baseTokenURI;
     }
 
-    function mint(address to, uint256 inscriptionNumber, string memory inscriptionId) external onlyBridge {
+    function mint(address to, uint256 number, string memory inscriptionId) external onlyBridge {
         //adjust exist
         require(mpId2Number[inscriptionId]==0, "inscriptionId is repeat");
-        require(string.length(mpNumber2Id[inscriptionNumber])==0, "inscriptionNumber is repeat");
+        require(string.length(mpNumber2Id[number])==0, "number is repeat");
 
-        mpId2Number[inscriptionId] = inscriptionNumber;
-        mpNumber2Id[inscriptionNumber] = inscriptionId;
+        mpId2Number[inscriptionId] = number;
+        mpNumber2Id[number] = inscriptionId;
 
-        _mint(to, inscriptionNumber);
+        _mint(to, number);
     }
 
     // Notice that is not require to approve wrapped tokens to use the bridge
-    function burn(address sender, uint256 inscriptionNumber) external onlyBridge returns(string memory){
-        require(_ownerOf(inscriptionNumber) == sender, "Illegal permissions");
-        require(string.length(mpNumber2Id[inscriptionNumber])>0, "inscriptionNumber is not exist");
+    function burn(address sender, uint256 number) external onlyBridge returns(string memory){
+        require(_ownerOf(number) == sender, "Illegal permissions");
+        require(string.length(mpNumber2Id[number])>0, "number is not exist");
 
-        string memory inscriptionId = mpNumber2Id[inscriptionNumber];
+        string memory inscriptionId = mpNumber2Id[number];
 
         //adjust exist
         delete mpId2Number[inscriptionId];
-        delete mpNumber2Id[inscriptionNumber];
+        delete mpNumber2Id[number];
 
-        _burn(inscriptionNumber);
+        _burn(number);
         return inscriptionId;
     }
 
@@ -67,8 +67,8 @@ contract ERC721TokenWrapped is ERC721Enumerable {
         _baseTokenURI = newBaseTokenURI;
     }
 
-    function tokenURI(uint256 inscriptionNumber) public view override virtual returns (string memory) {
-        string memory inscriptionId = mpNumber2Id[inscriptionNumber];
+    function tokenURI(uint256 number) public view override virtual returns (string memory) {
+        string memory inscriptionId = mpNumber2Id[number];
         return bytes(_baseTokenURI).length > 0 ? string.concat(_baseTokenURI, inscriptionId) : "";
     }
 }
