@@ -32,7 +32,7 @@ contract ERC721TokenWrapped is ERC721Enumerable {
     function mint(address to, uint256 number, string memory inscriptionId) external onlyBridge {
         //adjust exist
         require(bytes(mpNumber2Id[number]).length<=0, "number is repeat");
-        require(mpId2Number[inscriptionId]==0 && inscriptionId != mpNumber2Id[0], "inscriptionId is repeat");
+        require(mpId2Number[inscriptionId]==0 && keccak256(abi.encode(inscriptionId)) != keccak256(abi.encode(mpNumber2Id[0])), "inscriptionId is repeat");
 
         mpId2Number[inscriptionId] = number;
         mpNumber2Id[number] = inscriptionId;
@@ -68,6 +68,8 @@ contract ERC721TokenWrapped is ERC721Enumerable {
     }
 
     function tokenURI(uint256 number) public view override virtual returns (string memory) {
+        require(bytes(mpNumber2Id[number]).length>0, "number is not exist");
+
         string memory inscriptionId = mpNumber2Id[number];
         return bytes(_baseTokenURI).length > 0 ? string.concat(_baseTokenURI, inscriptionId) : "";
     }
