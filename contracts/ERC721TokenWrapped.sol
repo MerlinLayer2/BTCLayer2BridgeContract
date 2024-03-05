@@ -37,7 +37,7 @@ contract ERC721TokenWrapped is ERC721Enumerable {
     function mint(address to, uint256 tokenId, string memory inscriptionId) external onlyBridge {
         //adjust exist
         require(bytes(mpTokenId2InscriptionId[tokenId]).length <= 0, "tokenId is repeat");
-        require(mpInscriptionId2TokenId[inscriptionId].isUsed == false, "inscriptionId is repeat");
+        require(!mpInscriptionId2TokenId[inscriptionId].isUsed, "inscriptionId is repeat");
 
         mpInscriptionId2TokenId[inscriptionId] = TokenId(tokenId, true);
         mpTokenId2InscriptionId[tokenId] = inscriptionId;
