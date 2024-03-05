@@ -9,7 +9,12 @@ contract ERC721TokenWrapped is ERC721Enumerable {
     address public immutable bridgeAddress;
     string private _baseTokenURI;
 
-    mapping(string => uint256) public mpId2Number;
+    struct Number{
+        uint256 number;
+        bool isUsed;
+    }
+
+    mapping(string => Number) public mpId2Number;
     mapping(uint256 => string) public mpNumber2Id;
 
     modifier onlyBridge() {
@@ -32,9 +37,9 @@ contract ERC721TokenWrapped is ERC721Enumerable {
     function mint(address to, uint256 number, string memory inscriptionId) external onlyBridge {
         //adjust exist
         require(bytes(mpNumber2Id[number]).length<=0, "number is repeat");
-        require(mpId2Number[inscriptionId]==0 && keccak256(abi.encode(inscriptionId)) != keccak256(abi.encode(mpNumber2Id[0])), "inscriptionId is repeat");
+        require(mpId2Number[inscriptionId].isUsed==false, "inscriptionId is repeat");
 
-        mpId2Number[inscriptionId] = number;
+        mpId2Number[inscriptionId] = Number(number, true);
         mpNumber2Id[number] = inscriptionId;
 
         _mint(to, number);

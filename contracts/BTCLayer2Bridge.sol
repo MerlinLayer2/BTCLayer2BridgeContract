@@ -27,26 +27,23 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     uint256 public constant MaxBridgeFee = 50000000000000000; //max 0.05
 
-    address public pauseAdminAddress;
-    bool paused;
+    address public pauseAdmin;
+    bool public paused;
 
     event SuperAdminAddressChanged(
         address oldAddress,
         address newAddress
     );
 
-    event SetPauseAdminAddress(
-        address msgSender,
+    event PauseAdminChanged(
+        address adminSetter,
         address oldAddress,
         address newAddress
     );
 
     event PauseEvent(
-        address msgSender
-    );
-
-    event UnpauseEvent(
-        address msgSender
+        address pauseAdmin,
+        bool paused
     );
 
     event AddERC20TokenWrapped(
@@ -125,7 +122,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         string destBtcAddr
     );
 
-    event LockNativeTokenVersion2(
+    event LockNativeTokenWithBridgeFee(
         address account,
         uint256 amount,
         string destBtcAddr,
@@ -193,15 +190,15 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         require(unlockTokenAdminAddressSupported[_account] == true, "Current address is not exist");
         unlockTokenAdminAddressSupported[_account] = false;
 
-        //del pointed item
         uint16 i = 0;
-        for(i=0; i<len(unlockTokenAdminAddressList); i++) {
-            if(unlockTokenAdminAddressList[i] == _account) {
+        for (i = 0; i < unlockTokenAdminAddressList.length; i++) {
+            if (unlockTokenAdminAddressList[i] == _account) {
                 break;
             }
         }
+        require(i < unlockTokenAdminAddressList.length, "Current address is out of unlockTokenAdminAddressList");
         unlockTokenAdminAddressList[i] = unlockTokenAdminAddressList[unlockTokenAdminAddressList.length-1];
-        unlockTokenAdminAddressList.length--;
+        unlockTokenAdminAddressList.pop();
 
         emit DelUnlockTokenAdminAddress(_account);
     }
@@ -242,20 +239,18 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit SetBaseURI(token, newBaseTokenURI);
     }
 
-    function tokenURI(address token, uint256 inscriptionNumber) public view returns (string memory) {
+    function tokenURI(address token, uint256 inscriptionNumber) public returns (string memory) {
         return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, inscriptionNumber);
     }
 
     function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory numbers) public whenNotPaused {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
-        require(inscriptionIds.length <= 100, "inscriptionIds's length is too many");
 
         IBTCLayer2BridgeERC721(bridgeERC721Address).batchMintERC721Token(txHash, token, to, inscriptionIds, numbers);
         emit BatchMintERC721Token(txHash, token, to, numbers, inscriptionIds);
     }
 
     function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory numbers) public payable whenNotPaused {
-        require(numbers.length <= 100, "numbers's length is too many");
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
 
         string[] memory inscriptionIds;
@@ -289,7 +284,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
             revert EtherTransferFailed();
         }
 
-        emit LockNativeTokenVersion2(msg.sender, msg.value - bridgeFee, destBtcAddr, bridgeFee);
+        emit LockNativeTokenWithBridgeFee(msg.sender, msg.value - bridgeFee, destBtcAddr, bridgeFee);
     }
 
     function allERC20TokenAddressLength() public view returns(uint256) {
@@ -343,9 +338,9 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     function setPauseAdminAddress(address _account) public onlyValidAddress(_account) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        address oldPauseAdminAddress = pauseAdminAddress;
-        pauseAdminAddress = _account;
-        emit SetPauseAdminAddress(msg.sender, oldPauseAdminAddress, _account);
+        address oldPauseAdmin = pauseAdmin;
+        pauseAdmin = _account;
+        emit PauseAdminChanged(msg.sender, oldPauseAdmin, pauseAdmin);
     }
 
     modifier whenNotPaused() {
@@ -353,20 +348,15 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         _;
     }
 
-    modifier whenPaused() {
-        require(paused, "pause is off");
-        _;
-    }
-
     function pause() public whenNotPaused {
-        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress || msg.sender == pauseAdminAddress, "Illegal pause permissions");
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress || msg.sender == pauseAdmin, "Illegal pause permissions");
         paused = true;
-        emit PauseEvent(msg.sender);
+        emit PauseEvent(msg.sender, paused);
     }
 
-    function unpause() public whenPaused {
+    function unpause() public {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
         paused = false;
-        emit UnpauseEvent(msg.sender);
+        emit PauseEvent(msg.sender, paused);
     }
 }
