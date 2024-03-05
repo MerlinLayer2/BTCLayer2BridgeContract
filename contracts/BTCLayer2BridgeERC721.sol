@@ -61,13 +61,13 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         ERC721TokenWrapped(token).setBaseURI(newBaseTokenURI);
     }
 
-    //tokenURI: id->number->tokenURI(number)
-    function tokenURI(address token, uint256 number) public view returns (string memory) {
-        return ERC721TokenWrapped(token).tokenURI(number);
+    //tokenURI: id->tokenId->tokenURI(tokenId)
+    function tokenURI(address token, uint256 tokenId) public view returns (string memory) {
+        return ERC721TokenWrapped(token).tokenURI(tokenId);
     }
 
-    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory numbers) external onlyBridge {
-        require(inscriptionIds.length == numbers.length, "length is not match.");
+    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory tokenIds) external onlyBridge {
+        require(inscriptionIds.length == tokenIds.length, "length is not match.");
 
         require(!erc721TxHashUnlocked[txHash], "Transaction has been executed");
         erc721TxHashUnlocked[txHash] = true;
@@ -77,18 +77,18 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         userERC721MintTxHash[to].push(txHash);
 
         //batch mint
-        for (uint16 i=0; i<numbers.length; i++) {
-            ERC721TokenWrapped(token).mint(to, numbers[i], inscriptionIds[i]);
+        for (uint16 i=0; i<tokenIds.length; i++) {
+            ERC721TokenWrapped(token).mint(to, tokenIds[i], inscriptionIds[i]);
         }
     }
 
-    function batchBurnERC721Token(address sender, address token, uint256[] memory numbers) external onlyBridge returns(string[] memory) {
+    function batchBurnERC721Token(address sender, address token, uint256[] memory tokenIds) external onlyBridge returns(string[] memory) {
         require(erc721TokenInfoSupported[token], "This token is not supported");
 
         //batch burn
-        string[] memory burnInscriptionIds = new string[](numbers.length);
-        for (uint16 i=0; i<numbers.length; i++) {
-            burnInscriptionIds[i] = ERC721TokenWrapped(token).burn(sender, numbers[i]);
+        string[] memory burnInscriptionIds = new string[](tokenIds.length);
+        for (uint16 i=0; i<tokenIds.length; i++) {
+            burnInscriptionIds[i] = ERC721TokenWrapped(token).burn(sender, tokenIds[i]);
         }
 
         return burnInscriptionIds;

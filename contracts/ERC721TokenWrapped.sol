@@ -9,13 +9,13 @@ contract ERC721TokenWrapped is ERC721Enumerable {
     address public immutable bridgeAddress;
     string private _baseTokenURI;
 
-    struct Number{
-        uint256 number;
+    struct TokenId{
+        uint256 tokenId;
         bool isUsed;
     }
 
-    mapping(string => Number) public mpId2Number;
-    mapping(uint256 => string) public mpNumber2Id;
+    mapping(string => TokenId) public mpInscriptionId2TokenId;
+    mapping(uint256 => string) public mpTokenId2InscriptionId;
 
     modifier onlyBridge() {
         require(
@@ -34,27 +34,27 @@ contract ERC721TokenWrapped is ERC721Enumerable {
         _baseTokenURI = baseTokenURI;
     }
 
-    function mint(address to, uint256 number, string memory inscriptionId) external onlyBridge {
+    function mint(address to, uint256 tokenId, string memory inscriptionId) external onlyBridge {
         //adjust exist
-        require(bytes(mpNumber2Id[number]).length<=0, "number is repeat");
-        require(mpId2Number[inscriptionId].isUsed==false, "inscriptionId is repeat");
+        require(bytes(mpTokenId2InscriptionId[tokenId]).length<=0, "tokenId is repeat");
+        require(mpInscriptionId2TokenId[inscriptionId].isUsed==false, "inscriptionId is repeat");
 
-        mpId2Number[inscriptionId] = Number(number, true);
-        mpNumber2Id[number] = inscriptionId;
+        mpInscriptionId2TokenId[inscriptionId] = TokenId(tokenId, true);
+        mpTokenId2InscriptionId[tokenId] = inscriptionId;
 
-        _mint(to, number);
+        _mint(to, tokenId);
     }
 
     // Notice that is not require to approve wrapped tokens to use the bridge
-    function burn(address sender, uint256 number) external onlyBridge returns(string memory){
-        require(_ownerOf(number) == sender, "Illegal permissions");
-        string memory inscriptionId = mpNumber2Id[number];
+    function burn(address sender, uint256 tokenId) external onlyBridge returns(string memory){
+        require(_ownerOf(tokenId) == sender, "Illegal permissions");
+        string memory inscriptionId = mpTokenId2InscriptionId[tokenId];
 
         //adjust exist
-        delete mpId2Number[inscriptionId];
-        delete mpNumber2Id[number];
+        delete mpInscriptionId2TokenId[inscriptionId];
+        delete mpTokenId2InscriptionId[tokenId];
 
-        _burn(number);
+        _burn(tokenId);
         return inscriptionId;
     }
 
@@ -70,10 +70,10 @@ contract ERC721TokenWrapped is ERC721Enumerable {
         _baseTokenURI = newBaseTokenURI;
     }
 
-    function tokenURI(uint256 number) public view override virtual returns (string memory) {
-        require(bytes(mpNumber2Id[number]).length>0, "number is not exist");
+    function tokenURI(uint256 tokenId) public view override virtual returns (string memory) {
+        require(bytes(mpTokenId2InscriptionId[tokenId]).length>0, "tokenId is not exist");
 
-        string memory inscriptionId = mpNumber2Id[number];
+        string memory inscriptionId = mpTokenId2InscriptionId[tokenId];
         return bytes(_baseTokenURI).length > 0 ? string.concat(_baseTokenURI, inscriptionId) : "";
     }
 }

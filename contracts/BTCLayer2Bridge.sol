@@ -97,7 +97,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         bytes32 txHash,
         address token,
         address account,
-        uint256[] numbers,
+        uint256[] tokenIds,
         string[] inscriptionIds
     );
 
@@ -105,7 +105,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address token,
         address account,
         string destBtcAddr,
-        uint256[] numbers,
+        uint256[] tokenIds,
         string[] inscriptionIds,
         uint256 bridgeFee
     );
@@ -239,27 +239,27 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit SetBaseURI(token, newBaseTokenURI);
     }
 
-    function tokenURI(address token, uint256 number) public returns (string memory) {
-        return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, number);
+    function tokenURI(address token, uint256 tokenId) public returns (string memory) {
+        return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, tokenId);
     }
 
-    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory numbers) public whenNotPaused {
+    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory tokenIds) public whenNotPaused {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
 
-        IBTCLayer2BridgeERC721(bridgeERC721Address).batchMintERC721Token(txHash, token, to, inscriptionIds, numbers);
-        emit BatchMintERC721Token(txHash, token, to, numbers, inscriptionIds);
+        IBTCLayer2BridgeERC721(bridgeERC721Address).batchMintERC721Token(txHash, token, to, inscriptionIds, tokenIds);
+        emit BatchMintERC721Token(txHash, token, to, tokenIds, inscriptionIds);
     }
 
-    function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory numbers) public payable whenNotPaused {
+    function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
 
         string[] memory inscriptionIds;
-        inscriptionIds = IBTCLayer2BridgeERC721(bridgeERC721Address).batchBurnERC721Token(msg.sender, token, numbers);
+        inscriptionIds = IBTCLayer2BridgeERC721(bridgeERC721Address).batchBurnERC721Token(msg.sender, token, tokenIds);
         (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, numbers, inscriptionIds, bridgeFee);
+        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, tokenIds, inscriptionIds, bridgeFee);
     }
 
     function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public whenNotPaused {
