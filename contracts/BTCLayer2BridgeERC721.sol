@@ -39,7 +39,7 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         __Ownable_init_unchained(_initialOwner);
     }
 
-    function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) external onlyBridge returns(address) {
+    function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) external onlyBridge returns (address) {
         bytes32 tokenInfoHash = keccak256(
             abi.encodePacked(_name, _symbol, _baseURI)
         );
@@ -77,32 +77,32 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         userERC721MintTxHash[to].push(txHash);
 
         //batch mint
-        for (uint16 i=0; i<tokenIds.length; i++) {
+        for (uint16 i = 0; i < tokenIds.length; i++) {
             ERC721TokenWrapped(token).mint(to, tokenIds[i], inscriptionIds[i]);
         }
     }
 
-    function batchBurnERC721Token(address sender, address token, uint256[] memory tokenIds) external onlyBridge returns(string[] memory) {
+    function batchBurnERC721Token(address sender, address token, uint256[] memory tokenIds) external onlyBridge returns (string[] memory) {
         require(erc721TokenInfoSupported[token], "This token is not supported");
 
         //batch burn
         string[] memory burnInscriptionIds = new string[](tokenIds.length);
-        for (uint16 i=0; i<tokenIds.length; i++) {
+        for (uint16 i = 0; i < tokenIds.length; i++) {
             burnInscriptionIds[i] = ERC721TokenWrapped(token).burn(sender, tokenIds[i]);
         }
 
         return burnInscriptionIds;
     }
 
-    function allERC721TokenAddressLength() public view returns(uint256) {
+    function allERC721TokenAddressLength() public view returns (uint256) {
         return allERC721TokenAddress.length;
     }
 
-    function allERC721TxHashLength() public view returns(uint256) {
+    function allERC721TxHashLength() public view returns (uint256) {
         return allERC721TxHash.length;
     }
 
-    function userERC721MintTxHashLength(address user) public view returns(uint256) {
+    function userERC721MintTxHashLength(address user) public view returns (uint256) {
         return userERC721MintTxHash[user].length;
     }
 }

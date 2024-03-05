@@ -58,7 +58,7 @@ contract BTCLayer2BridgeERC20 is OwnableUpgradeable {
     }
 
     function mintERC20Token(bytes32 txHash, address token, address to, uint256 amount) external onlyBridge {
-        require(!erc20TxHashUnlocked[txHash], "Transaction has been executed");
+        require(erc20TxHashUnlocked[txHash] == false, "Transaction has been executed");
         erc20TxHashUnlocked[txHash] = true;
         require(erc20TokenInfoSupported[token], "This token is not supported");
         allERC20TxHash.push(txHash);
