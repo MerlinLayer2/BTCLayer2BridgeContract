@@ -48,8 +48,6 @@ contract ERC721TokenWrapped is ERC721Enumerable {
     // Notice that is not require to approve wrapped tokens to use the bridge
     function burn(address sender, uint256 number) external onlyBridge returns(string memory){
         require(_ownerOf(number) == sender, "Illegal permissions");
-        require(bytes(mpNumber2Id[number]).length>0, "number is not exist");
-
         string memory inscriptionId = mpNumber2Id[number];
 
         //adjust exist

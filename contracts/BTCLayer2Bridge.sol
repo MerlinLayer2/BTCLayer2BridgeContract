@@ -179,7 +179,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     function addUnlockTokenAdminAddress(address _account) public onlyValidAddress(_account) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        require(unlockTokenAdminAddressSupported[_account] == false, "Current address has been added");
+        require(!unlockTokenAdminAddressSupported[_account], "Current address has been added");
         unlockTokenAdminAddressList.push(_account);
         unlockTokenAdminAddressSupported[_account] = true;
         emit AddUnlockTokenAdminAddress(_account);
@@ -239,8 +239,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit SetBaseURI(token, newBaseTokenURI);
     }
 
-    function tokenURI(address token, uint256 inscriptionNumber) public returns (string memory) {
-        return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, inscriptionNumber);
+    function tokenURI(address token, uint256 number) public returns (string memory) {
+        return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, number);
     }
 
     function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory numbers) public whenNotPaused {
@@ -265,7 +265,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public whenNotPaused {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
         require(to != address(0x0), "to address is zero address");
-        require(nativeTokenTxHashUnlocked[txHash] == false, "Transaction has been executed");
+        require(!nativeTokenTxHashUnlocked[txHash], "Transaction has been executed");
         nativeTokenTxHashUnlocked[txHash] = true;
         allNativeTokenTxHash.push(txHash);
         userNativeTokenMintTxHash[to].push(txHash);

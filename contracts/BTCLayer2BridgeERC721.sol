@@ -62,15 +62,14 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     }
 
     //tokenURI: id->number->tokenURI(number)
-    function tokenURI(address token, uint256 inscriptionNumber) public view returns (string memory) {
-        return ERC721TokenWrapped(token).tokenURI(inscriptionNumber);
+    function tokenURI(address token, uint256 number) public view returns (string memory) {
+        return ERC721TokenWrapped(token).tokenURI(number);
     }
 
     function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory numbers) external onlyBridge {
         require(inscriptionIds.length == numbers.length, "length is not match.");
-        require(inscriptionIds.length <= 100, "inscriptionIds's length is too many");
 
-        require(erc721TxHashUnlocked[txHash] == false, "Transaction has been executed");
+        require(!erc721TxHashUnlocked[txHash], "Transaction has been executed");
         erc721TxHashUnlocked[txHash] = true;
         require(erc721TokenInfoSupported[token], "This token is not supported");
         allERC721TxHash.push(txHash);
@@ -85,7 +84,6 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
 
     function batchBurnERC721Token(address sender, address token, uint256[] memory numbers) external onlyBridge returns(string[] memory) {
         require(erc721TokenInfoSupported[token], "This token is not supported");
-        require(numbers.length <= 100, "numbers's length is too many");
 
         //batch burn
         string[] memory burnInscriptionIds = new string[](numbers.length);
