@@ -14,7 +14,7 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
     bytes32[] public allERC721TxHash;
     mapping(address => bytes32[]) public userERC721MintTxHash;
 
-    string public constant version = "1.0";
+    string public constant version = "1.1.0";
 
     modifier onlyValidAddress(address addr) {
         require(addr != address(0), "Illegal address");
@@ -39,7 +39,7 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         __Ownable_init_unchained(_initialOwner);
     }
 
-    function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) external onlyBridge returns(address) {
+    function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) external onlyBridge returns (address) {
         bytes32 tokenInfoHash = keccak256(
             abi.encodePacked(_name, _symbol, _baseURI)
         );
@@ -61,16 +61,15 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         ERC721TokenWrapped(token).setBaseURI(newBaseTokenURI);
     }
 
-    //tokenURI: id->number->tokenURI(number)
-    function tokenURI(address token, uint256 inscriptionNumber) public view returns (string memory) {
-        return ERC721TokenWrapped(token).tokenURI(inscriptionNumber);
+    //tokenURI: id->tokenId->tokenURI(tokenId)
+    function tokenURI(address token, uint256 tokenId) public view returns (string memory) {
+        return ERC721TokenWrapped(token).tokenURI(tokenId);
     }
 
-    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory inscriptionNumbers) external onlyBridge {
-        require(inscriptionIds.length == inscriptionNumbers.length, "length is not match.");
-        require(inscriptionIds.length <= 100, "inscriptionIds's length is too many");
+    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory tokenIds) external onlyBridge {
+        require(inscriptionIds.length == tokenIds.length, "length is not match.");
 
-        require(erc721TxHashUnlocked[txHash] == false, "Transaction has been executed");
+        require(!erc721TxHashUnlocked[txHash], "Transaction has been executed");
         erc721TxHashUnlocked[txHash] = true;
         require(erc721TokenInfoSupported[token], "This token is not supported");
         allERC721TxHash.push(txHash);
@@ -78,33 +77,32 @@ contract BTCLayer2BridgeERC721 is OwnableUpgradeable {
         userERC721MintTxHash[to].push(txHash);
 
         //batch mint
-        for (uint16 i=0; i<inscriptionNumbers.length; i++) {
-            ERC721TokenWrapped(token).mint(to, inscriptionNumbers[i], inscriptionIds[i]);
+        for (uint16 i = 0; i < tokenIds.length; i++) {
+            ERC721TokenWrapped(token).mint(to, tokenIds[i], inscriptionIds[i]);
         }
     }
 
-    function batchBurnERC721Token(address sender, address token, uint256[] memory inscriptionNumbers) external onlyBridge returns(string[] memory) {
+    function batchBurnERC721Token(address sender, address token, uint256[] memory tokenIds) external onlyBridge returns (string[] memory) {
         require(erc721TokenInfoSupported[token], "This token is not supported");
-        require(inscriptionNumbers.length <= 100, "inscriptionNumbers's length is too many");
 
         //batch burn
-        string[] memory burnInscriptionIds = new string[](inscriptionNumbers.length);
-        for (uint16 i=0; i<inscriptionNumbers.length; i++) {
-            burnInscriptionIds[i] = ERC721TokenWrapped(token).burn(sender, inscriptionNumbers[i]);
+        string[] memory burnInscriptionIds = new string[](tokenIds.length);
+        for (uint16 i = 0; i < tokenIds.length; i++) {
+            burnInscriptionIds[i] = ERC721TokenWrapped(token).burn(sender, tokenIds[i]);
         }
 
         return burnInscriptionIds;
     }
 
-    function allERC721TokenAddressLength() public view returns(uint256) {
+    function allERC721TokenAddressLength() public view returns (uint256) {
         return allERC721TokenAddress.length;
     }
 
-    function allERC721TxHashLength() public view returns(uint256) {
+    function allERC721TxHashLength() public view returns (uint256) {
         return allERC721TxHash.length;
     }
 
-    function userERC721MintTxHashLength(address user) public view returns(uint256) {
+    function userERC721MintTxHashLength(address user) public view returns (uint256) {
         return userERC721MintTxHash[user].length;
     }
 }

@@ -23,11 +23,27 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     uint256 public bridgeFee;
     address public feeAddress;
 
-    string public constant version = "1.0";
+    string public constant version = "1.1.0";
+
+    uint256 public constant MaxBridgeFee = 50000000000000000; //max 0.05
+
+    address public pauseAdmin;
+    bool public paused;
 
     event SuperAdminAddressChanged(
         address oldAddress,
         address newAddress
+    );
+
+    event PauseAdminChanged(
+        address adminSetter,
+        address oldAddress,
+        address newAddress
+    );
+
+    event PauseEvent(
+        address pauseAdmin,
+        bool paused
     );
 
     event AddERC20TokenWrapped(
@@ -61,7 +77,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address token,
         address account,
         uint256 amount,
-        string destBtcAddr
+        string destBtcAddr,
+        uint256 bridgeFee
     );
 
     event AddERC721TokenWrapped(
@@ -80,7 +97,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         bytes32 txHash,
         address token,
         address account,
-        uint256[] inscriptionNumbers,
+        uint256[] tokenIds,
         string[] inscriptionIds
     );
 
@@ -88,8 +105,9 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address token,
         address account,
         string destBtcAddr,
-        uint256[] inscriptionNumbers,
-        string[] inscriptionIds
+        uint256[] tokenIds,
+        string[] inscriptionIds,
+        uint256 bridgeFee
     );
 
     event UnlockNativeToken(
@@ -104,9 +122,18 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         string destBtcAddr
     );
 
+    event LockNativeTokenWithBridgeFee(
+        address account,
+        uint256 amount,
+        string destBtcAddr,
+        uint256 bridgeFee
+    );
+
     event SetBridgeSettingsFee(
         address feeAddress,
-        uint256 bridgeFee
+        uint256 bridgeFee,
+        address feeAddressOld,
+        uint256 bridgeFeeOld
     );
 
     error EtherTransferFailed();
@@ -152,7 +179,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     function addUnlockTokenAdminAddress(address _account) public onlyValidAddress(_account) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        require(unlockTokenAdminAddressSupported[_account] == false, "Current address has been added");
+        require(!unlockTokenAdminAddressSupported[_account], "Current address has been added");
         unlockTokenAdminAddressList.push(_account);
         unlockTokenAdminAddressSupported[_account] = true;
         emit AddUnlockTokenAdminAddress(_account);
@@ -162,33 +189,44 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         require(unlockTokenAdminAddressSupported[_account] == true, "Current address is not exist");
         unlockTokenAdminAddressSupported[_account] = false;
+
+        uint16 i = 0;
+        for (i = 0; i < unlockTokenAdminAddressList.length; i++) {
+            if (unlockTokenAdminAddressList[i] == _account) {
+                break;
+            }
+        }
+        require(i < unlockTokenAdminAddressList.length, "Current address is out of unlockTokenAdminAddressList");
+        unlockTokenAdminAddressList[i] = unlockTokenAdminAddressList[unlockTokenAdminAddressList.length - 1];
+        unlockTokenAdminAddressList.pop();
+
         emit DelUnlockTokenAdminAddress(_account);
     }
 
-    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) public returns(address) {
+    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) public returns (address) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         address tokenWrappedAddress = IBTCLayer2BridgeERC20(bridgeERC20Address).addERC20TokenWrapped(_name, _symbol, _decimals, _cap);
         emit AddERC20TokenWrapped(tokenWrappedAddress, _name, _symbol, _decimals, _cap);
         return tokenWrappedAddress;
     }
 
-    function mintERC20Token(bytes32 txHash, address token, address to, uint256 amount) public {
+    function mintERC20Token(bytes32 txHash, address token, address to, uint256 amount) public whenNotPaused {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
         IBTCLayer2BridgeERC20(bridgeERC20Address).mintERC20Token(txHash, token, to, amount);
         emit MintERC20Token(txHash, token, to, amount);
     }
 
-    function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable {
+    function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
         IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
-        (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
+        (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BurnERC20Token(token, msg.sender, amount, destBtcAddr);
+        emit BurnERC20Token(token, msg.sender, amount, destBtcAddr, bridgeFee);
     }
 
-    function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) public returns(address) {
+    function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) public returns (address) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         address tokenWrappedAddress = IBTCLayer2BridgeERC721(bridgeERC721Address).addERC721TokenWrapped(_name, _symbol, _baseURI);
         emit AddERC721TokenWrapped(tokenWrappedAddress, _name, _symbol, _baseURI);
@@ -201,91 +239,92 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit SetBaseURI(token, newBaseTokenURI);
     }
 
-    function tokenURI(address token, uint256 inscriptionNumber) public returns (string memory) {
-        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, inscriptionNumber);
+    function tokenURI(address token, uint256 tokenId) public returns (string memory) {
+        return IBTCLayer2BridgeERC721(bridgeERC721Address).tokenURI(token, tokenId);
     }
 
-    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory inscriptionNumbers) public {
+    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory tokenIds) public whenNotPaused {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
-        require(inscriptionIds.length <= 100, "inscriptionIds's length is too many");
 
-        IBTCLayer2BridgeERC721(bridgeERC721Address).batchMintERC721Token(txHash, token, to, inscriptionIds, inscriptionNumbers);
-        emit BatchMintERC721Token(txHash, token, to, inscriptionNumbers, inscriptionIds);
+        IBTCLayer2BridgeERC721(bridgeERC721Address).batchMintERC721Token(txHash, token, to, inscriptionIds, tokenIds);
+        emit BatchMintERC721Token(txHash, token, to, tokenIds, inscriptionIds);
     }
 
-    function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory inscriptionNumbers) public payable {
-        require(inscriptionNumbers.length <= 100, "inscriptionNumbers's length is too many");
+    function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
         require(msg.value == bridgeFee, "The bridgeFee is incorrect");
 
         string[] memory inscriptionIds;
-        inscriptionIds = IBTCLayer2BridgeERC721(bridgeERC721Address).batchBurnERC721Token(msg.sender, token, inscriptionNumbers);
-        (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
+        inscriptionIds = IBTCLayer2BridgeERC721(bridgeERC721Address).batchBurnERC721Token(msg.sender, token, tokenIds);
+        (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
-        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, inscriptionNumbers, inscriptionIds);
+        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, tokenIds, inscriptionIds, bridgeFee);
     }
 
-    function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public {
+    function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public whenNotPaused {
         require(unlockTokenAdminAddressSupported[msg.sender], "Illegal permissions");
         require(to != address(0x0), "to address is zero address");
-        require(nativeTokenTxHashUnlocked[txHash] == false, "Transaction has been executed");
+        require(!nativeTokenTxHashUnlocked[txHash], "Transaction has been executed");
         nativeTokenTxHashUnlocked[txHash] = true;
         allNativeTokenTxHash.push(txHash);
         userNativeTokenMintTxHash[to].push(txHash);
-        (bool success, ) = to.call{value: amount}(new bytes(0));
+        (bool success,) = to.call{value: amount}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
         emit UnlockNativeToken(txHash, to, amount);
     }
 
-    function lockNativeToken(string memory destBtcAddr) public payable {
+    function lockNativeToken(string memory destBtcAddr) public payable whenNotPaused {
         require(msg.value > bridgeFee, "Insufficient cross-chain assets");
 
-        (bool success, ) = feeAddress.call{value: bridgeFee}(new bytes(0));
+        (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
         if (!success) {
             revert EtherTransferFailed();
         }
 
-        emit LockNativeToken(msg.sender, msg.value - bridgeFee, destBtcAddr);
+        emit LockNativeTokenWithBridgeFee(msg.sender, msg.value - bridgeFee, destBtcAddr, bridgeFee);
     }
 
-    function allERC20TokenAddressLength() public view returns(uint256) {
+    function allERC20TokenAddressLength() public view returns (uint256) {
         return IBTCLayer2BridgeERC20(bridgeERC20Address).allERC20TokenAddressLength();
     }
 
-    function allERC20TxHashLength() public view returns(uint256) {
+    function allERC20TxHashLength() public view returns (uint256) {
         return IBTCLayer2BridgeERC20(bridgeERC20Address).allERC20TxHashLength();
     }
 
-    function allERC721TokenAddressLength() public view returns(uint256) {
+    function allERC721TokenAddressLength() public view returns (uint256) {
         return IBTCLayer2BridgeERC721(bridgeERC721Address).allERC721TokenAddressLength();
     }
 
-    function allERC721TxHashLength() public view returns(uint256) {
+    function allERC721TxHashLength() public view returns (uint256) {
         return IBTCLayer2BridgeERC721(bridgeERC721Address).allERC721TxHashLength();
     }
 
-    function allNativeTokenTxHashLength() public view returns(uint256) {
+    function allNativeTokenTxHashLength() public view returns (uint256) {
         return allNativeTokenTxHash.length;
     }
 
-    function userERC20MintTxHashLength(address user) public view returns(uint256) {
+    function userERC20MintTxHashLength(address user) public view returns (uint256) {
         return IBTCLayer2BridgeERC20(bridgeERC20Address).userERC20MintTxHashLength(user);
     }
 
-    function userERC721MintTxHashLength(address user) public view returns(uint256) {
+    function userERC721MintTxHashLength(address user) public view returns (uint256) {
         return IBTCLayer2BridgeERC721(bridgeERC721Address).userERC721MintTxHashLength(user);
     }
 
-    function userNativeTokenMintTxHashLength(address user) public view returns(uint256) {
+    function userNativeTokenMintTxHashLength(address user) public view returns (uint256) {
         return userNativeTokenMintTxHash[user].length;
     }
 
     function setBridgeSettingsFee(address _feeAddress, uint256 _bridgeFee) external {
         require(msg.sender == superAdminAddress, "Illegal permissions");
+        require(_bridgeFee <= MaxBridgeFee, "bridgeFee is too high"); //max 0.05
+
+        address feeAddressOld = feeAddress;
+        uint256 bridgeFeeOld = bridgeFee;
 
         if (_feeAddress != address(0)) {
             feeAddress = _feeAddress;
@@ -294,6 +333,30 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
             bridgeFee = _bridgeFee;
         }
 
-        emit SetBridgeSettingsFee(_feeAddress, _bridgeFee);
+        emit SetBridgeSettingsFee(_feeAddress, _bridgeFee, feeAddressOld, bridgeFeeOld);
+    }
+
+    function setPauseAdminAddress(address _account) public onlyValidAddress(_account) {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        address oldPauseAdmin = pauseAdmin;
+        pauseAdmin = _account;
+        emit PauseAdminChanged(msg.sender, oldPauseAdmin, pauseAdmin);
+    }
+
+    modifier whenNotPaused() {
+        require(!paused, "pause is on");
+        _;
+    }
+
+    function pause() public whenNotPaused {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress || msg.sender == pauseAdmin, "Illegal pause permissions");
+        paused = true;
+        emit PauseEvent(msg.sender, paused);
+    }
+
+    function unpause() public {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
+        paused = false;
+        emit PauseEvent(msg.sender, paused);
     }
 }
