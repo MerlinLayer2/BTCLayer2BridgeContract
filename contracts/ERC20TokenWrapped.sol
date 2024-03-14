@@ -43,7 +43,6 @@ contract ERC20TokenWrapped is ERC20Permit, ERC20Capped {
 
     // Notice that is not require to approve wrapped tokens to use the bridge
     function burn(address account, uint256 value) external onlyBridge {
-        require(!isBlack(account), "account is in blackList");
         _burn(account, value);
     }
 
@@ -51,17 +50,14 @@ contract ERC20TokenWrapped is ERC20Permit, ERC20Capped {
         return _decimals;
     }
 
+    // Blacklist restrict from-address, contains(burn's from-address)
     function _update(address from, address to, uint256 value) override(ERC20, ERC20Capped) internal virtual {
-        require(!isBlack(from), "from is in blackList");
+        require(!isBlackListed[from], "from is in blackList");
         ERC20Capped._update(from, to, value);
     }
 
     function setBlackList(address account, bool state) external onlyBridge {
         isBlackListed[account] = state;
         emit SetBlackList(account, state);
-    }
-
-    function isBlack(address account) public view returns (bool) {
-        return isBlackListed[account];
     }
 }
