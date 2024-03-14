@@ -38,7 +38,6 @@ contract ERC20TokenWrapped is ERC20Permit, ERC20Capped {
     }
 
     function mint(address to, uint256 value) external onlyBridge {
-        require(!isBlack(to), "to is in blackList");
         _mint(to, value);
     }
 
@@ -57,12 +56,12 @@ contract ERC20TokenWrapped is ERC20Permit, ERC20Capped {
         ERC20Capped._update(from, to, value);
     }
 
-    function setBlackList(address account, bool state) external onlyBridge{
+    function setBlackList(address account, bool state) external onlyBridge {
         isBlackListed[account] = state;
         emit SetBlackList(account, state);
     }
 
-    function isBlack(address account) public view returns(bool) {
+    function isBlack(address account) public view returns (bool) {
         return isBlackListed[account];
     }
 }

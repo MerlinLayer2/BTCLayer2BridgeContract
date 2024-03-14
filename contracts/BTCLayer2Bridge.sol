@@ -233,7 +233,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BurnERC20Token(token, msg.sender, amount, destBtcAddr, bridgeFee);
     }
 
-    function setBlackListERC20Token(address token, address account, bool state) external{
+    function setBlackListERC20Token(address token, address account, bool state) external {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         IBTCLayer2BridgeERC20(bridgeERC20Address).setBlackListERC20Token(token, account, state);
         emit SetBlackListERC20Token(msg.sender, token, account, state);
