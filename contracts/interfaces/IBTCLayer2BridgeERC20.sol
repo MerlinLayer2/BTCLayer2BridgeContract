@@ -9,4 +9,5 @@ interface IBTCLayer2BridgeERC20 {
     function allERC20TokenAddressLength() external view returns(uint256);
     function allERC20TxHashLength() external view returns(uint256);
     function userERC20MintTxHashLength(address user) external view returns(uint256);
+    function setBlackListERC20Token(address token, address account, bool state) external;
 }

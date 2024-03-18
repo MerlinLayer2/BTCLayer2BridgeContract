@@ -14,7 +14,7 @@ contract BTCLayer2BridgeERC20 is OwnableUpgradeable {
     bytes32[] public allERC20TxHash;
     mapping(address => bytes32[]) public userERC20MintTxHash;
 
-    string public constant version = "1.0";
+    string public constant version = "1.2.0";
 
     modifier onlyValidAddress(address addr) {
         require(addr != address(0), "Illegal address");
@@ -39,7 +39,7 @@ contract BTCLayer2BridgeERC20 is OwnableUpgradeable {
         __Ownable_init_unchained(_initialOwner);
     }
 
-    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) external onlyBridge returns(address)  {
+    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) external onlyBridge returns (address)  {
         bytes32 tokenInfoHash = keccak256(
             abi.encodePacked(_name, _symbol, _decimals, _cap)
         );
@@ -71,15 +71,20 @@ contract BTCLayer2BridgeERC20 is OwnableUpgradeable {
         ERC20TokenWrapped(token).burn(sender, amount);
     }
 
-    function allERC20TokenAddressLength() public view returns(uint256) {
+    function allERC20TokenAddressLength() public view returns (uint256) {
         return allERC20TokenAddress.length;
     }
 
-    function allERC20TxHashLength() public view returns(uint256) {
+    function allERC20TxHashLength() public view returns (uint256) {
         return allERC20TxHash.length;
     }
 
-    function userERC20MintTxHashLength(address user) public view returns(uint256) {
+    function userERC20MintTxHashLength(address user) public view returns (uint256) {
         return userERC20MintTxHash[user].length;
+    }
+
+    function setBlackListERC20Token(address token, address account, bool state) external onlyBridge {
+        require(erc20TokenInfoSupported[token], "This token is not supported");
+        ERC20TokenWrapped(token).setBlackList(account, state);
     }
 }

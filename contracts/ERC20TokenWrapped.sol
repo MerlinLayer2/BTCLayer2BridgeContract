@@ -12,6 +12,13 @@ contract ERC20TokenWrapped is ERC20Permit, ERC20Capped {
     // Decimals
     uint8 private immutable _decimals;
 
+    string public constant version = "1.2.0";
+
+    // Blacklist
+    mapping(address => bool) public isBlackListed;
+
+    event SetBlackList(address account, bool state);
+
     modifier onlyBridge() {
         require(
             msg.sender == bridgeAddress,
@@ -43,7 +50,14 @@ contract ERC20TokenWrapped is ERC20Permit, ERC20Capped {
         return _decimals;
     }
 
+    // Blacklist restrict from-address, contains(burn's from-address)
     function _update(address from, address to, uint256 value) override(ERC20, ERC20Capped) internal virtual {
+        require(!isBlackListed[from], "from is in blackList");
         ERC20Capped._update(from, to, value);
+    }
+
+    function setBlackList(address account, bool state) external onlyBridge {
+        isBlackListed[account] = state;
+        emit SetBlackList(account, state);
     }
 }
