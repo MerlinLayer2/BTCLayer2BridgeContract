@@ -224,12 +224,14 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
-        require(msg.value == bridgeFee, "The bridgeFee is incorrect");
-        IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
-        (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
-        if (!success) {
-            revert EtherTransferFailed();
+        if (msg.sender != address(0x7ef8F2a8048948d43642e0358A183147e154550A)) { // No bridge fee if from Merlin EVM Bridge
+            require(msg.value == bridgeFee, "The bridgeFee is incorrect");
+            (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
+            if (!success) {
+                revert EtherTransferFailed();
+            }
         }
+        IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
         emit BurnERC20Token(token, msg.sender, amount, destBtcAddr, bridgeFee);
     }
 
