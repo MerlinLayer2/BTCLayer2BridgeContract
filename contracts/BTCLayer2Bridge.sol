@@ -31,7 +31,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     bool public paused;
 
     //white list
-    mapping(address => uint16) public whiteList;
+    struct stRate{
+        bool isSet;
+        uint256 rate;
+    }
+    mapping(address => stRate) public whiteList;
 
     event SuperAdminAddressChanged(
         address oldAddress,
@@ -53,6 +57,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address adminSetter,
         address addressKey,
         uint256 rate
+    );
+
+    event DeleteWhiteList(
+        address adminSetter,
+        address addressKey
     );
 
     event AddERC20TokenWrapped(
@@ -234,9 +243,9 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
         uint256 _bridgeFee = getBridgeFee(msg.sender, token);
-        require(msg.value >= _bridgeFee, "invalid bridgeFee");
+        require(msg.value == _bridgeFee, "invalid bridgeFee");
 
-        _bridgeFee = msg.value; //todo 1.是否所有msg.value 都设置为 bridgeFee 2.前端需要调用合约获取 bridgeFee
+        //todo 1.是否所有msg.value 都设置为 bridgeFee 2.前端需要调用合约获取 bridgeFee
         if (_bridgeFee > 0) {
             (bool success,) = feeAddress.call{value:  _bridgeFee}(new bytes(0));
             if (!success) {
@@ -280,9 +289,9 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
         uint256 _bridgeFee = getBridgeFeeTimes(msg.sender, token, tokenIds.length);
-        require(msg.value >= _bridgeFee, "invalid bridgeFee");
+        require(msg.value == _bridgeFee, "invalid bridgeFee");
 
-        _bridgeFee = msg.value; //todo 1.是否所有msg.value 都设置为 bridgeFee 2.前端需要调用合约获取 bridgeFee
+        //todo 1.是否所有msg.value 都设置为 bridgeFee 2.前端需要调用合约获取 bridgeFee
         if (_bridgeFee > 0) {
             (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
             if (!success) {
@@ -401,17 +410,26 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
         require(_address != address (0), "invalid _address");
         require(_rate >= 0, "invalid _rate");
-        whiteList[_key] = _rate;
+
+        whiteList[_address] = stRate(true, _rate);
         emit SetWhiteList(msg.sender, _address, _rate);
     }
 
+    function deleteWhiteList(address _address) external {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
+        require(_address != address (0), "invalid _address");
+        delete whiteList[_address];
+        emit DeleteWhiteList(msg.sender, _address);
+    }
+
+
     function getBridgeFee(address msgSender, address token) external returns(uint256) {
-        if (whiteList[msgSender] > 0) {
-            return bridgeFee * whiteList[msgSender] / 100;
+        if (whiteList[msgSender].isSet) {
+            return bridgeFee * whiteList[msgSender].rate / 100;
         }
 
-        if (token != address (0) && whiteList[token] > 0) {
-            return bridgeFee * whiteList[token] / 100;
+        if (token != address (0) && whiteList[token].isSet) {
+            return bridgeFee * whiteList[token].rate / 100;
         }
 
         return bridgeFee;
