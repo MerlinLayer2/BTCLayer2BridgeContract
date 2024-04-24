@@ -23,7 +23,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     uint256 public bridgeFee;
     address public feeAddress;
 
-    string public constant version = "1.2.0";
+    string public constant version = "1.2.1";
 
     uint256 public constant MaxBridgeFee = 50000000000000000; //max 0.05
 
@@ -224,13 +224,18 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
-        require(msg.value == bridgeFee, "The bridgeFee is incorrect");
-        IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
-        (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
-        if (!success) {
-            revert EtherTransferFailed();
+        uint256 _bridgeFee = 0;
+        if (msg.sender != address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
+            require(msg.value == bridgeFee, "The bridgeFee is incorrect");
+            (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
+            if (!success) {
+                revert EtherTransferFailed();
+            }
+            _bridgeFee = bridgeFee;
         }
-        emit BurnERC20Token(token, msg.sender, amount, destBtcAddr, bridgeFee);
+
+        IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
+        emit BurnERC20Token(token, msg.sender, amount, destBtcAddr, _bridgeFee);
     }
 
     function setBlackListERC20Token(address token, address account, bool state) external {
