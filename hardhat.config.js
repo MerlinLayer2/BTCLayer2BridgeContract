@@ -32,6 +32,7 @@ module.exports = {
     apiKey: {
       btclayer2: "no-api-key-needed"
     },
+    // apiKey: "process.env.API_KEY",
     customChains: [
       {
         network: "btclayer2",
