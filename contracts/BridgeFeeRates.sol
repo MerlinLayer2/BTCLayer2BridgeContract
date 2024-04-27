@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.20;
 
-library Whites {
+library BridgeFeeRates {
     //white list
     struct stRate{
         bool isSet;
@@ -27,19 +27,19 @@ library Whites {
     }
 
 
-    function getBridgeFee(White storage white, address msgSender, address token, uint256 bridgeFee) internal view   returns(uint256) {
+    function getBridgeFeeRate(White storage white, address msgSender, address token) internal view returns(uint256) {
         if (white.whiteList[msgSender].isSet) {
-            return bridgeFee * white.whiteList[msgSender].rate / 100;
+            return white.whiteList[msgSender].rate;
         }
 
         if (token != address (0) && white.whiteList[token].isSet) {
-            return bridgeFee * white.whiteList[token].rate / 100;
+            return white.whiteList[token].rate;
         }
 
-        return bridgeFee;
+        return 100;
     }
 
-    function getBridgeFeeTimes(White storage white, address msgSender, address token, uint256 times, uint256 bridgeFee) internal view  returns(uint256) {
-        return getBridgeFee(white, msgSender, token, bridgeFee) * times;
+    function getBridgeFeeRateTimes(White storage white, address msgSender, address token, uint256 times) internal view returns(uint256) {
+        return getBridgeFeeRate(white, msgSender, token) * times;
     }
 }

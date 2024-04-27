@@ -5,7 +5,7 @@ pragma solidity 0.8.20;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/IBTCLayer2BridgeERC20.sol";
 import "./interfaces/IBTCLayer2BridgeERC721.sol";
-import "./WhiteLists.sol";
+import "./BridgeFeeRates.sol";
 
 contract BTCLayer2Bridge is OwnableUpgradeable {
     address public superAdminAddress;
@@ -31,8 +31,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     address public pauseAdmin;
     bool public paused;
 
-    using Whites for Whites.White;
-    Whites.White private white;
+    using BridgeFeeRates for BridgeFeeRates.White;
+    BridgeFeeRates.White private white;
 
     event SetWhiteList(
         address adminSetter,
@@ -417,10 +417,10 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function getBridgeFee(address msgSender, address token) public view returns(uint256) {
-        return white.getBridgeFee(msgSender, token, bridgeFee);
+        return bridgeFee * white.getBridgeFeeRate(msgSender, token) / 100;
     }
 
     function getBridgeFeeTimes(address msgSender, address token, uint256 times) public view returns(uint256) {
-        return white.getBridgeFeeTimes(msgSender, token, times, bridgeFee);
+        return bridgeFee * white.getBridgeFeeRateTimes(msgSender, token, times) / 100;
     }
 }
