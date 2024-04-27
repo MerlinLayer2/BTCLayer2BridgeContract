@@ -5,6 +5,7 @@ pragma solidity 0.8.20;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/IBTCLayer2BridgeERC20.sol";
 import "./interfaces/IBTCLayer2BridgeERC721.sol";
+import "./WhiteLists.sol";
 
 contract BTCLayer2Bridge is OwnableUpgradeable {
     address public superAdminAddress;
@@ -30,12 +31,20 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     address public pauseAdmin;
     bool public paused;
 
-    //white list
-    struct stRate{
-        bool isSet;
-        uint256 rate;
-    }
-    mapping(address => stRate) public whiteList;
+    using Whites for Whites.White;
+    Whites.White private white;
+
+    event SetWhiteList(
+        address adminSetter,
+        address addressKey,
+        uint256 rate
+    );
+
+    event DeleteWhiteList(
+        address adminSetter,
+        address addressKey
+    );
+
 
     event SuperAdminAddressChanged(
         address oldAddress,
@@ -51,17 +60,6 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     event PauseEvent(
         address pauseAdmin,
         bool paused
-    );
-
-    event SetWhiteList(
-        address adminSetter,
-        address addressKey,
-        uint256 rate
-    );
-
-    event DeleteWhiteList(
-        address adminSetter,
-        address addressKey
     );
 
     event AddERC20TokenWrapped(
@@ -408,34 +406,21 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     //_address is msg.sender or token.
     function setWhiteList(address _address, uint256 _rate) external {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
-        require(_address != address (0), "invalid _address");
-        require(_rate >= 0, "invalid _rate");
-
-        whiteList[_address] = stRate(true, _rate);
+        white.setWhiteList(_address, _rate);
         emit SetWhiteList(msg.sender, _address, _rate);
     }
 
     function deleteWhiteList(address _address) external {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
-        require(_address != address (0), "invalid _address");
-        delete whiteList[_address];
+        white.deleteWhiteList(_address);
         emit DeleteWhiteList(msg.sender, _address);
     }
 
-
-    function getBridgeFee(address msgSender, address token) external returns(uint256) {
-        if (whiteList[msgSender].isSet) {
-            return bridgeFee * whiteList[msgSender].rate / 100;
-        }
-
-        if (token != address (0) && whiteList[token].isSet) {
-            return bridgeFee * whiteList[token].rate / 100;
-        }
-
-        return bridgeFee;
+    function getBridgeFee(address msgSender, address token) public view returns(uint256) {
+        return white.getBridgeFee(msgSender, token, bridgeFee);
     }
 
-    function getBridgeFeeTimes(address msgSender, address token, uint256 times) external returns(uint256) {
-        return getBridgeFee(msgSender, token) * times;
+    function getBridgeFeeTimes(address msgSender, address token, uint256 times) public view returns(uint256) {
+        return white.getBridgeFeeTimes(msgSender, token, times, bridgeFee);
     }
 }
