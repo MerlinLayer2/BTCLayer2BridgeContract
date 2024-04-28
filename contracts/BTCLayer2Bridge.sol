@@ -240,16 +240,18 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
-        uint256 _bridgeFee = getBridgeFee(msg.sender, token);
-        require(msg.value == _bridgeFee, "invalid bridgeFee");
+        uint256 _bridgeFee = 0;
+        if (msg.sender != address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
+            _bridgeFee = getBridgeFee(msg.sender, token);
+            require(msg.value == _bridgeFee, "invalid bridgeFee");
 
-        if (_bridgeFee > 0) {
-            (bool success,) = feeAddress.call{value:  _bridgeFee}(new bytes(0));
-            if (!success) {
-                revert EtherTransferFailed();
+            if (_bridgeFee > 0) {
+                (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
+                if (!success) {
+                    revert EtherTransferFailed();
+                }
             }
         }
-
         IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
         emit BurnERC20Token(token, msg.sender, amount, destBtcAddr, _bridgeFee);
     }
