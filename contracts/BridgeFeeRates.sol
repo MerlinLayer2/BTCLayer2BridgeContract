@@ -3,7 +3,6 @@
 pragma solidity 0.8.20;
 
 library BridgeFeeRates {
-    //white list
     struct stRate{
         bool isSet;
         uint256 rate;

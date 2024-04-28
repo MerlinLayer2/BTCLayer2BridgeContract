@@ -243,7 +243,6 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         uint256 _bridgeFee = getBridgeFee(msg.sender, token);
         require(msg.value == _bridgeFee, "invalid bridgeFee");
 
-        //todo 1.是否所有msg.value 都设置为 bridgeFee 2.前端需要调用合约获取 bridgeFee
         if (_bridgeFee > 0) {
             (bool success,) = feeAddress.call{value:  _bridgeFee}(new bytes(0));
             if (!success) {
@@ -290,7 +289,6 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         uint256 _bridgeFee = getBridgeFeeTimes(msg.sender, token, tokenIds.length);
         require(msg.value == _bridgeFee, "invalid bridgeFee");
 
-        //todo 1.是否所有msg.value 都设置为 bridgeFee 2.前端需要调用合约获取 bridgeFee
         if (_bridgeFee > 0) {
             (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
             if (!success) {
