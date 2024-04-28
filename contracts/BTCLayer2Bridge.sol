@@ -5,6 +5,7 @@ pragma solidity 0.8.20;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/IBTCLayer2BridgeERC20.sol";
 import "./interfaces/IBTCLayer2BridgeERC721.sol";
+import "./BridgeFeeRates.sol";
 
 contract BTCLayer2Bridge is OwnableUpgradeable {
     address public superAdminAddress;
@@ -23,12 +24,27 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     uint256 public bridgeFee;
     address public feeAddress;
 
-    string public constant version = "1.2.1";
+    string public constant version = "1.3.0";
 
     uint256 public constant MaxBridgeFee = 50000000000000000; //max 0.05
 
     address public pauseAdmin;
     bool public paused;
+
+    using BridgeFeeRates for BridgeFeeRates.White;
+    BridgeFeeRates.White private white;
+
+    event SetWhiteList(
+        address adminSetter,
+        address addressKey,
+        uint256 rate
+    );
+
+    event DeleteWhiteList(
+        address adminSetter,
+        address addressKey
+    );
+
 
     event SuperAdminAddressChanged(
         address oldAddress,
@@ -226,14 +242,16 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
         uint256 _bridgeFee = 0;
         if (msg.sender != address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
-            require(msg.value == bridgeFee, "The bridgeFee is incorrect");
-            (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
-            if (!success) {
-                revert EtherTransferFailed();
-            }
-            _bridgeFee = bridgeFee;
-        }
+            _bridgeFee = getBridgeFee(msg.sender, token);
+            require(msg.value == _bridgeFee, "invalid bridgeFee");
 
+            if (_bridgeFee > 0) {
+                (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
+                if (!success) {
+                    revert EtherTransferFailed();
+                }
+            }
+        }
         IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
         emit BurnERC20Token(token, msg.sender, amount, destBtcAddr, _bridgeFee);
     }
@@ -269,15 +287,20 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
-        require(msg.value == bridgeFee, "The bridgeFee is incorrect");
+        require(tokenIds.length <= 50, "invalid tokenIds.length");
+        uint256 _bridgeFee = getBridgeFeeTimes(msg.sender, token, tokenIds.length);
+        require(msg.value == _bridgeFee, "invalid bridgeFee");
+
+        if (_bridgeFee > 0) {
+            (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
+            if (!success) {
+                revert EtherTransferFailed();
+            }
+        }
 
         string[] memory inscriptionIds;
         inscriptionIds = IBTCLayer2BridgeERC721(bridgeERC721Address).batchBurnERC721Token(msg.sender, token, tokenIds);
-        (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
-        if (!success) {
-            revert EtherTransferFailed();
-        }
-        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, tokenIds, inscriptionIds, bridgeFee);
+        emit BatchBurnERC721Token(token, msg.sender, destBtcAddr, tokenIds, inscriptionIds, _bridgeFee);
     }
 
     function unlockNativeToken(bytes32 txHash, address to, uint256 amount) public whenNotPaused {
@@ -295,14 +318,17 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function lockNativeToken(string memory destBtcAddr) public payable whenNotPaused {
-        require(msg.value > bridgeFee, "Insufficient cross-chain assets");
+        uint256 _bridgeFee = getBridgeFee(msg.sender, address (0));
+        require(msg.value > _bridgeFee, "Insufficient cross-chain assets");
 
-        (bool success,) = feeAddress.call{value: bridgeFee}(new bytes(0));
-        if (!success) {
-            revert EtherTransferFailed();
+        if (_bridgeFee > 0) {
+            (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
+            if (!success) {
+                revert EtherTransferFailed();
+            }
         }
 
-        emit LockNativeTokenWithBridgeFee(msg.sender, msg.value - bridgeFee, destBtcAddr, bridgeFee);
+        emit LockNativeTokenWithBridgeFee(msg.sender, msg.value - _bridgeFee, destBtcAddr, _bridgeFee);
     }
 
     function allERC20TokenAddressLength() public view returns (uint256) {
@@ -376,5 +402,26 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
         paused = false;
         emit PauseEvent(msg.sender, paused);
+    }
+
+    //_address is msg.sender or token.
+    function setWhiteList(address _address, uint256 _rate) external {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
+        white.setWhiteList(_address, _rate);
+        emit SetWhiteList(msg.sender, _address, _rate);
+    }
+
+    function deleteWhiteList(address _address) external {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
+        white.deleteWhiteList(_address);
+        emit DeleteWhiteList(msg.sender, _address);
+    }
+
+    function getBridgeFee(address msgSender, address token) public view returns(uint256) {
+        return bridgeFee * white.getBridgeFeeRate(msgSender, token) / 100;
+    }
+
+    function getBridgeFeeTimes(address msgSender, address token, uint256 times) public view returns(uint256) {
+        return bridgeFee * white.getBridgeFeeRateTimes(msgSender, token, times) / 100;
     }
 }

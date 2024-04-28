@@ -13,4 +13,4 @@ artifacts
 
 .env-test
 .env-pre-production
-
+.env*
