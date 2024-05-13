@@ -89,6 +89,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         uint256 amount
     );
 
+    event MintERC20TokenBtcInfo(
+        string btcFrom,
+        bytes32 btcTxHash
+    );
+
     event BurnERC20Token(
         address token,
         address account,
@@ -124,6 +129,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         string[] inscriptionIds
     );
 
+    event BatchMintERC721TokenBtcInfo(
+        string btcFrom,
+        bytes32 btcTxHash
+    );
+
     event BatchBurnERC721Token(
         address token,
         address account,
@@ -137,6 +147,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         bytes32 txHash,
         address account,
         uint256 amount
+    );
+
+    event UnlockNativeTokenBtcInfo(
+        string btcFrom,
+        bytes32 btcTxHash
     );
 
     event LockNativeToken(
@@ -239,6 +254,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit MintERC20Token(txHash, token, to, amount);
     }
 
+    function mintERC20Token(bytes32 txHash, address token, address to, uint256 amount, string memory btcFrom, bytes32 btcTxHash) public whenNotPaused {
+        mintERC20Token(txHash, token, to, amount);
+        emit MintERC20TokenBtcInfo(btcFrom, btcTxHash);
+    }
+
     function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
         uint256 _bridgeFee = 0;
         if (msg.sender != address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
@@ -286,6 +306,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BatchMintERC721Token(txHash, token, to, tokenIds, inscriptionIds);
     }
 
+    function batchMintERC721Token(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory tokenIds, string memory btcFrom, bytes32 btcTxHash) public whenNotPaused {
+        batchMintERC721Token(txHash, token, to, inscriptionIds, tokenIds);
+        emit BatchMintERC721TokenBtcInfo(btcFrom, btcTxHash);
+    }
+
     function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
         require(tokenIds.length <= 50, "invalid tokenIds.length");
         uint256 _bridgeFee = getBridgeFeeTimes(msg.sender, token, tokenIds.length);
@@ -315,6 +340,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
             revert EtherTransferFailed();
         }
         emit UnlockNativeToken(txHash, to, amount);
+    }
+
+    function unlockNativeTokenV2(bytes32 txHash, address to, uint256 amount, string memory btcFrom, bytes32 btcTxHash) public whenNotPaused {
+        unlockNativeToken(txHash, to, amount);
+        emit UnlockNativeTokenBtcInfo(btcFrom, btcTxHash);
     }
 
     function lockNativeToken(string memory destBtcAddr) public payable whenNotPaused {
