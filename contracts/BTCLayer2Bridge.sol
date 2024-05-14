@@ -24,7 +24,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     uint256 public bridgeFee;
     address public feeAddress;
 
-    string public constant version = "1.3.0";
+    string public constant version = "1.4.0";
 
     uint256 public constant MaxBridgeFee = 50000000000000000; //max 0.05
 
@@ -91,7 +91,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     event MintERC20TokenWithBtcInfo(
         string btcFrom,
-        bytes32 btcTxHash
+        string btcTxHash
     );
 
     event BurnERC20Token(
@@ -131,7 +131,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     event BatchMintERC721TokenWithBtcInfo(
         string btcFrom,
-        bytes32 btcTxHash
+        string btcTxHash
     );
 
     event BatchBurnERC721Token(
@@ -151,7 +151,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     event UnlockNativeTokenWithBtcInfo(
         string btcFrom,
-        bytes32 btcTxHash
+        string btcTxHash
     );
 
     event LockNativeToken(
@@ -254,7 +254,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit MintERC20Token(txHash, token, to, amount);
     }
 
-    function mintERC20TokenWithBtcInfo(bytes32 txHash, address token, address to, uint256 amount, string memory btcFrom, bytes32 btcTxHash) public whenNotPaused {
+    function mintERC20TokenWithBtcInfo(bytes32 txHash, address token, address to, uint256 amount, string memory btcFrom, string memory btcTxHash) public whenNotPaused {
         mintERC20Token(txHash, token, to, amount);
         emit MintERC20TokenWithBtcInfo(btcFrom, btcTxHash);
     }
@@ -306,7 +306,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BatchMintERC721Token(txHash, token, to, tokenIds, inscriptionIds);
     }
 
-    function batchMintERC721TokenWithBtcInfo(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory tokenIds, string memory btcFrom, bytes32 btcTxHash) public whenNotPaused {
+    function batchMintERC721TokenWithBtcInfo(bytes32 txHash, address token, address to, string[] memory inscriptionIds, uint256[] memory tokenIds, string memory btcFrom, string memory btcTxHash) public whenNotPaused {
         batchMintERC721Token(txHash, token, to, inscriptionIds, tokenIds);
         emit BatchMintERC721TokenWithBtcInfo(btcFrom, btcTxHash);
     }
@@ -342,7 +342,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit UnlockNativeToken(txHash, to, amount);
     }
 
-    function unlockNativeTokenWithBtcInfo(bytes32 txHash, address to, uint256 amount, string memory btcFrom, bytes32 btcTxHash) public whenNotPaused {
+    function unlockNativeTokenWithBtcInfo(bytes32 txHash, address to, uint256 amount, string memory btcFrom, string memory btcTxHash) public whenNotPaused {
         unlockNativeToken(txHash, to, amount);
         emit UnlockNativeTokenWithBtcInfo(btcFrom, btcTxHash);
     }
