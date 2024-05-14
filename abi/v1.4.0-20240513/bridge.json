@@ -208,9 +208,9 @@
       },
       {
         "indexed": false,
-        "internalType": "bytes32",
+        "internalType": "string",
         "name": "btcTxHash",
-        "type": "bytes32"
+        "type": "string"
       }
     ],
     "name": "BatchMintERC721TokenWithBtcInfo",
@@ -396,9 +396,9 @@
       },
       {
         "indexed": false,
-        "internalType": "bytes32",
+        "internalType": "string",
         "name": "btcTxHash",
-        "type": "bytes32"
+        "type": "string"
       }
     ],
     "name": "MintERC20TokenWithBtcInfo",
@@ -641,9 +641,9 @@
       },
       {
         "indexed": false,
-        "internalType": "bytes32",
+        "internalType": "string",
         "name": "btcTxHash",
-        "type": "bytes32"
+        "type": "string"
       }
     ],
     "name": "UnlockNativeTokenWithBtcInfo",
@@ -911,9 +911,9 @@
         "type": "string"
       },
       {
-        "internalType": "bytes32",
+        "internalType": "string",
         "name": "btcTxHash",
-        "type": "bytes32"
+        "type": "string"
       }
     ],
     "name": "batchMintERC721TokenWithBtcInfo",
@@ -1177,9 +1177,9 @@
         "type": "string"
       },
       {
-        "internalType": "bytes32",
+        "internalType": "string",
         "name": "btcTxHash",
-        "type": "bytes32"
+        "type": "string"
       }
     ],
     "name": "mintERC20TokenWithBtcInfo",
@@ -1484,9 +1484,9 @@
         "type": "string"
       },
       {
-        "internalType": "bytes32",
+        "internalType": "string",
         "name": "btcTxHash",
-        "type": "bytes32"
+        "type": "string"
       }
     ],
     "name": "unlockNativeTokenWithBtcInfo",
