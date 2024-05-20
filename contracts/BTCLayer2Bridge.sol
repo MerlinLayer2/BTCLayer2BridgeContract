@@ -394,7 +394,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function setBridgeSettingsFee(address _feeAddress, uint256 _bridgeFee) external {
-        require(msg.sender == superAdminAddress, "Illegal permissions");
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         require(_bridgeFee <= MaxBridgeFee, "bridgeFee is too high"); //max 0.05
 
         address feeAddressOld = feeAddress;
