@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/IBTCLayer2BridgeERC20.sol";
 import "./interfaces/IBTCLayer2BridgeERC721.sol";
 import "./BridgeFeeRates.sol";
-import "./BtcAddressCheck.sol";
+import "./interfaces/ICheckBtcContract.sol";
 
 contract BTCLayer2Bridge is OwnableUpgradeable {
     address public superAdminAddress;
@@ -35,12 +35,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     using BridgeFeeRates for BridgeFeeRates.White;
     BridgeFeeRates.White private white;
 
-    //check btc address
-    string public constant MAINNET_PARAMS_FLAG = "bc";
-    string public constant TESTNET_PARAMS_FLAG = "tb";
-    BtcAddressCheck.Params public btcParams = (4200 == block.chainid) ?
-        BtcAddressCheck.initializeParams(MAINNET_PARAMS_FLAG) :
-        BtcAddressCheck.initializeParams(TESTNET_PARAMS_FLAG);
+    address public checkBtcContractAddress;
 
     event SetWhiteList(
         address adminSetter,
@@ -60,6 +55,12 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     );
 
     event PauseAdminChanged(
+        address adminSetter,
+        address oldAddress,
+        address newAddress
+    );
+
+    event SetCheckBtcContractAddress(
         address adminSetter,
         address oldAddress,
         address newAddress
@@ -468,8 +469,15 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         return bridgeFee * white.getBridgeFeeRateTimes(msgSender, token, times) / 100;
     }
 
+    //set check btc contract address
+    function setCheckBtcContractAddress(address _address) external {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
+        address oldAddress = checkBtcContractAddress;
+        checkBtcContractAddress = _address;
+        emit SetCheckBtcContractAddress(msg.sender, oldAddress, _address);
+    }
+
     function checkBtcAddress(string calldata _btcAddr) public view returns(bool){
-        BtcAddressCheck.Params memory params = btcParams;
-        return BtcAddressCheck.isValidBitcoinAddress(params, _btcAddr);
+        return ICheckBtcContract(checkBtcContractAddress).isValidBitcoinAddress(_btcAddr);
     }
 }
