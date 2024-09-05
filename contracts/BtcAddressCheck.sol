@@ -33,8 +33,8 @@ library BtcAddressCheck {
         bytes bech32HRPSegwit;
     }
 
-    function initializeParams(string calldata btcSegwit)
-    public
+    function initializeParams(string memory btcSegwit)
+    internal
     pure
     returns (Params memory)
     {
@@ -68,8 +68,8 @@ library BtcAddressCheck {
     }
 
     // verify the bitcoin address
-    function isValidBitcoinAddress(Params calldata params, string calldata addr)
-    public
+    function isValidBitcoinAddress(Params memory params, string calldata addr)
+    internal
     pure
     returns (bool)
     {
@@ -118,8 +118,8 @@ library BtcAddressCheck {
         return checkBase58(params, addrBytes);
     }
 
-    function checkBase58(Params calldata params, bytes memory inputs)
-    public
+    function checkBase58(Params memory params, bytes memory inputs)
+    internal
     pure
     returns (bool)
     {
@@ -142,7 +142,7 @@ library BtcAddressCheck {
     }
 
     function base58Decode(bytes memory data_)
-    public
+    internal
     pure
     returns (bytes memory)
     {
@@ -196,8 +196,8 @@ library BtcAddressCheck {
         }
     }
 
-    function isBech32(Params calldata params, bytes memory input)
-    public
+    function isBech32(Params memory params, bytes memory input)
+    internal
     pure
     returns (bool)
     {
@@ -221,7 +221,7 @@ library BtcAddressCheck {
     }
 
     function checkBech32(bytes memory input, uint256 index)
-    public
+    internal
     pure
     returns (bool)
     {
@@ -271,7 +271,7 @@ library BtcAddressCheck {
 
     /// @dev The original function used the neg (-) operator. Ref: https://github.com/bitcoinjs/bech32/blob/master/src/index.ts#L10-L20
     /// Since the neg operator is not available for uint type, the logic is modified as follow
-    function polymodStep(uint256 pre) public pure returns (uint256) {
+    function polymodStep(uint256 pre) internal pure returns (uint256) {
         uint256 b = pre >> 25;
         return (((pre & 0x1ffffff) << 5) ^
         (((b >> 0) & 1) == 0 ? 0 : 0x3b6a57b2) ^
@@ -281,7 +281,7 @@ library BtcAddressCheck {
             (((b >> 4) & 1) == 0 ? 0 : 0x2a1462b3));
     }
 
-    function bechDecode(bytes memory data) public pure returns (bytes memory) {
+    function bechDecode(bytes memory data) internal pure returns (bytes memory) {
         bytes memory reBytes = new bytes(data.length);
         for (uint256 i = 0; i < data.length; i++) {
             reBytes[i] = bytes1(_BECH32_INDEX[uint8(data[i])]);
@@ -296,7 +296,7 @@ library BtcAddressCheck {
         bytes memory hrp,
         bytes memory values,
         bytes memory checksum
-    ) public pure returns (uint256) {
+    ) internal pure returns (uint256) {
         uint256 chk = 1;
         // Account for the high bits of the HRP in the checksum.
         for (uint256 i = 0; i < hrp.length; i++) {
@@ -325,7 +325,7 @@ library BtcAddressCheck {
         return chk;
     }
 
-    function toBytes(bytes32 _data) public pure returns (bytes memory) {
+    function toBytes(bytes32 _data) internal pure returns (bytes memory) {
         return abi.encodePacked(_data);
     }
 
@@ -355,7 +355,7 @@ library BtcAddressCheck {
         bytes memory data,
         uint256 start,
         uint256 end
-    ) public pure returns (bytes memory) {
+    ) internal pure returns (bytes memory) {
         uint256 len = end - start;
         bytes memory result = new bytes(len);
 
@@ -387,7 +387,7 @@ library BtcAddressCheck {
     }
 
     function findLastIndexByte(bytes memory data, bytes1 toFind)
-    public
+    internal
     pure
     returns (uint256)
     {

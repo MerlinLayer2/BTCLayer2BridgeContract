@@ -36,8 +36,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     BridgeFeeRates.White private white;
 
     //check btc address
-    string public MAINNET_PARAMS_FLAG = "bc";
-    string public TESTNET_PARAMS_FLAG = "tb";
+    string public constant MAINNET_PARAMS_FLAG = "bc";
+    string public constant TESTNET_PARAMS_FLAG = "tb";
     BtcAddressCheck.Params public btcParams = (4200 == block.chainid) ?
         BtcAddressCheck.initializeParams(MAINNET_PARAMS_FLAG) :
         BtcAddressCheck.initializeParams(TESTNET_PARAMS_FLAG);
@@ -469,6 +469,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function checkBtcAddress(string calldata _btcAddr) public view returns(bool){
-        return BtcAddressCheck.isValidBitcoinAddress(btcParams, _btcAddr);
+        BtcAddressCheck.Params memory params = btcParams;
+        return BtcAddressCheck.isValidBitcoinAddress(params, _btcAddr);
     }
 }
