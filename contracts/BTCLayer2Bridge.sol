@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/IBTCLayer2BridgeERC20.sol";
 import "./interfaces/IBTCLayer2BridgeERC721.sol";
 import "./BridgeFeeRates.sol";
-import "./interfaces/ICheckBtcContract.sol";
+import "./interfaces/IBtcAddressChecker.sol";
 
 contract BTCLayer2Bridge is OwnableUpgradeable {
     address public superAdminAddress;
@@ -35,7 +35,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     using BridgeFeeRates for BridgeFeeRates.White;
     BridgeFeeRates.White private white;
 
-    address public checkBtcContractAddress;
+    address public btcAddressChecker;
 
     event SetWhiteList(
         address adminSetter,
@@ -60,7 +60,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address newAddress
     );
 
-    event SetCheckBtcContractAddress(
+    event SetBtcAddressChecker(
         address adminSetter,
         address oldAddress,
         address newAddress
@@ -269,8 +269,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function burnERC20Token(address token, uint256 amount, string calldata destBtcAddr) public payable whenNotPaused {
-        require(amount > 0, "invalid amount");
-        require(checkBtcAddress(destBtcAddr), "invalid destBtcAddr");
+        require(amount > 0, "Invalid amount");
+        require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
 
         uint256 _bridgeFee = 0;
         if (msg.sender != address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
@@ -324,10 +324,10 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function batchBurnERC721Token(address token, string calldata destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
-        require(tokenIds.length > 0 && tokenIds.length <= 50, "invalid tokenIds.length");
-        require(checkBtcAddress(destBtcAddr), "invalid destBtcAddr");
+        require(tokenIds.length > 0 && tokenIds.length <= 50, "Invalid tokenIds.length");
+        require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
         uint256 _bridgeFee = getBridgeFeeTimes(msg.sender, token, tokenIds.length);
-        require(msg.value == _bridgeFee, "invalid bridgeFee");
+        require(msg.value == _bridgeFee, "Invalid bridgeFee");
 
         if (_bridgeFee > 0) {
             (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
@@ -361,7 +361,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function lockNativeToken(string calldata destBtcAddr) public payable whenNotPaused {
-        require(checkBtcAddress(destBtcAddr), "invalid destBtcAddr");
+        require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
         uint256 _bridgeFee = getBridgeFee(msg.sender, address (0));
         require(msg.value > _bridgeFee, "Insufficient cross-chain assets");
 
@@ -469,15 +469,14 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         return bridgeFee * white.getBridgeFeeRateTimes(msgSender, token, times) / 100;
     }
 
-    //set check btc contract address
-    function setCheckBtcContractAddress(address _address) external {
+    function setBtcAddressChecker(address _address) external {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
-        address oldAddress = checkBtcContractAddress;
-        checkBtcContractAddress = _address;
-        emit SetCheckBtcContractAddress(msg.sender, oldAddress, _address);
+        address oldAddress = btcAddressChecker;
+        btcAddressChecker = _address;
+        emit SetBtcAddressChecker(msg.sender, oldAddress, _address);
     }
 
-    function checkBtcAddress(string calldata _btcAddr) public view returns(bool){
-        return ICheckBtcContract(checkBtcContractAddress).isValidBitcoinAddress(_btcAddr);
+    function isValidBtcAddress(string calldata _btcAddr) public view returns(bool){
+        return IBtcAddressChecker(btcAddressChecker).isValidBitcoinAddress(_btcAddr);
     }
 }
