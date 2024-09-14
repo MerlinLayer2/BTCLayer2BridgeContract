@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/IBTCLayer2BridgeERC20.sol";
 import "./interfaces/IBTCLayer2BridgeERC721.sol";
 import "./BridgeFeeRates.sol";
+import "./interfaces/IBtcAddressChecker.sol";
 
 contract BTCLayer2Bridge is OwnableUpgradeable {
     address public superAdminAddress;
@@ -24,7 +25,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     uint256 public bridgeFee;
     address public feeAddress;
 
-    string public constant version = "1.4.0";
+    string public constant version = "1.5.0";
 
     uint256 public constant MaxBridgeFee = 50000000000000000; //max 0.05
 
@@ -33,6 +34,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     using BridgeFeeRates for BridgeFeeRates.White;
     BridgeFeeRates.White private white;
+
+    address public btcAddressChecker;
 
     event SetWhiteList(
         address adminSetter,
@@ -52,6 +55,12 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     );
 
     event PauseAdminChanged(
+        address adminSetter,
+        address oldAddress,
+        address newAddress
+    );
+
+    event SetBtcAddressChecker(
         address adminSetter,
         address oldAddress,
         address newAddress
@@ -259,7 +268,10 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit MintERC20TokenWithBtcInfo(btcFrom, btcTxHash);
     }
 
-    function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
+    function burnERC20Token(address token, uint256 amount, string calldata destBtcAddr) public payable whenNotPaused {
+        require(amount > 0, "Invalid amount");
+        require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
+
         uint256 _bridgeFee = 0;
         if (msg.sender != address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
             _bridgeFee = getBridgeFee(msg.sender, token);
@@ -311,10 +323,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BatchMintERC721TokenWithBtcInfo(btcFrom, btcTxHash);
     }
 
-    function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
-        require(tokenIds.length <= 50, "invalid tokenIds.length");
+    function batchBurnERC721Token(address token, string calldata destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
+        require(tokenIds.length > 0 && tokenIds.length <= 50, "Invalid tokenIds.length");
+        require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
         uint256 _bridgeFee = getBridgeFeeTimes(msg.sender, token, tokenIds.length);
-        require(msg.value == _bridgeFee, "invalid bridgeFee");
+        require(msg.value == _bridgeFee, "Invalid bridgeFee");
 
         if (_bridgeFee > 0) {
             (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
@@ -347,7 +360,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit UnlockNativeTokenWithBtcInfo(btcFrom, btcTxHash);
     }
 
-    function lockNativeToken(string memory destBtcAddr) public payable whenNotPaused {
+    function lockNativeToken(string calldata destBtcAddr) public payable whenNotPaused {
+        require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
         uint256 _bridgeFee = getBridgeFee(msg.sender, address (0));
         require(msg.value > _bridgeFee, "Insufficient cross-chain assets");
 
@@ -453,5 +467,16 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     function getBridgeFeeTimes(address msgSender, address token, uint256 times) public view returns(uint256) {
         return bridgeFee * white.getBridgeFeeRateTimes(msgSender, token, times) / 100;
+    }
+
+    function setBtcAddressChecker(address _address) external {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
+        address oldAddress = btcAddressChecker;
+        btcAddressChecker = _address;
+        emit SetBtcAddressChecker(msg.sender, oldAddress, _address);
+    }
+
+    function isValidBtcAddress(string calldata _btcAddr) public view returns(bool){
+        return IBtcAddressChecker(btcAddressChecker).isValidBitcoinAddress(_btcAddr);
     }
 }
