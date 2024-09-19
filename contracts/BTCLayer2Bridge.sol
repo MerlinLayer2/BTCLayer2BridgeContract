@@ -36,6 +36,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     BridgeFeeRates.White private white;
 
     address public btcAddressChecker;
+    address public defaultBtcAddr;
 
     event SetWhiteList(
         address adminSetter,
@@ -61,6 +62,12 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     );
 
     event SetBtcAddressChecker(
+        address adminSetter,
+        address oldAddress,
+        address newAddress
+    );
+
+    event SetDefaultBtcAddress(
         address adminSetter,
         address oldAddress,
         address newAddress
@@ -323,6 +330,27 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BatchMintERC721TokenWithBtcInfo(btcFrom, btcTxHash);
     }
 
+    function lockNativeTokenExt() public payable whenNotPaused {
+        require(white.isSet(msg.sender), "Caller is not in whiteList");
+
+        lockNativeToken{value: msg.value}(defaultBtcAddr);
+        emit LockNativeTokenExt(msg.sender, msg.value);
+    }
+
+    function burnERC20TokenExt(address token, uint256 amount) public payable whenNotPaused {
+        require(white.isSet(msg.sender), "Caller is not in whiteList");
+
+        burnERC20Token{value: msg.value}(token, amount, defaultBtcAddr);
+        emit BurnERC20TokenExt(msg.sender, token, amount);
+    }
+
+    function batchBurnERC721TokenExt(address token, uint256[] memory tokenIds) public payable whenNotPaused {
+        require(white.isSet(msg.sender), "Caller is not in whiteList");
+
+        inscriptionIds = batchBurnERC721Token{value: msg.value}(token, tokenIds, defaultBtcAddr);
+        emit BatchBurnERC721TokenExt(msg.sender, token, defaultBtcAddr, tokenIds, inscriptionIds);
+    }
+
     function batchBurnERC721Token(address token, string calldata destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
         require(tokenIds.length > 0 && tokenIds.length <= 50, "Invalid tokenIds.length");
         require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
@@ -478,5 +506,12 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     function isValidBtcAddress(string calldata _btcAddr) public view returns(bool){
         return IBtcAddressChecker(btcAddressChecker).isValidBitcoinAddress(_btcAddr);
+    }
+
+    function setDefaultBtcAddress(address _address) external {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
+        address oldAddress = defaultBtcAddr;
+        defaultBtcAddr = _address;
+        emit SetDefaultBtcAddress(msg.sender, oldAddress, _address);
     }
 }

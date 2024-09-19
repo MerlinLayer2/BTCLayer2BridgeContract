@@ -41,4 +41,8 @@ library BridgeFeeRates {
     function getBridgeFeeRateTimes(White storage white, address msgSender, address token, uint256 times) internal view returns(uint256) {
         return getBridgeFeeRate(white, msgSender, token) * times;
     }
+
+    function isSet(White storage white, address key) internal view returns(bool) {
+        return white.whiteList[key].isSet;
+    }
 }
