@@ -67,12 +67,6 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address newAddress
     );
 
-//    event SetDefaultBtcAddress(
-//        address adminSetter,
-//        string oldAddress,
-//        string newAddress
-//    );
-
     event PauseEvent(
         address pauseAdmin,
         bool paused
@@ -550,11 +544,3 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     function isValidBtcAddress(string memory _btcAddr) public view returns(bool){
         return IBtcAddressChecker(btcAddressChecker).isValidBitcoinAddress(_btcAddr);
     }
-
-//    function setDefaultBtcAddress(string memory _address) external {
-//        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
-//        string memory oldAddress = defaultBtcAddr;
-//        defaultBtcAddr = _address;
-//        emit SetDefaultBtcAddress(msg.sender, oldAddress, _address);
-//    }
-}
