@@ -334,21 +334,22 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         require(white.isSet(msg.sender), "Caller is not in whiteList");
 
         lockNativeToken{value: msg.value}(defaultBtcAddr);
-        emit LockNativeTokenExt(msg.sender, msg.value);
+        emit LockNativeTokenExt(msg.sender, msg.value, defaultBtcAddr);
     }
 
     function burnERC20TokenExt(address token, uint256 amount) public payable whenNotPaused {
         require(white.isSet(msg.sender), "Caller is not in whiteList");
 
         burnERC20Token{value: msg.value}(token, amount, defaultBtcAddr);
-        emit BurnERC20TokenExt(msg.sender, token, amount);
+        emit BurnERC20TokenExt(msg.sender, token, amount, defaultBtcAddr);
     }
 
     function batchBurnERC721TokenExt(address token, uint256[] memory tokenIds) public payable whenNotPaused {
         require(white.isSet(msg.sender), "Caller is not in whiteList");
 
-        inscriptionIds = batchBurnERC721Token{value: msg.value}(token, tokenIds, defaultBtcAddr);
-        emit BatchBurnERC721TokenExt(msg.sender, token, defaultBtcAddr, tokenIds, inscriptionIds);
+        string[] memory inscriptionIds;
+        batchBurnERC721Token{value: msg.value}(token, tokenIds, defaultBtcAddr);
+        emit BatchBurnERC721TokenExt(msg.sender, token, tokenIds, defaultBtcAddr);
     }
 
     function batchBurnERC721Token(address token, string calldata destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
