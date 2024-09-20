@@ -527,6 +527,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         return IBtcAddressChecker(btcAddressChecker).isValidBitcoinAddress(_btcAddr);
     }
 
+    //non bridge out caller
     function setNonBridgeOutCaller(address _address) internal {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         require(_address != address (0), "invalid _address");
@@ -539,6 +540,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         delete nonBridgeOutCaller[_address];
     }
 
+    //non bridge out
     function lockNativeTokenNonBridgeOut() public payable whenNotPaused nonBridgeOut {
         require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
         lockNativeToken(defaultBtcAddr);
@@ -557,6 +559,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BatchBurnERC721TokenExt(msg.sender, token, tokenIds, defaultBtcAddr);
     }
 
+    //non bridge out flag
     modifier nonBridgeOut() {
         require(!nonBridgeOutFlag, "nonBridgeOut: it is already in nonBridgeOut");
         nonBridgeOutFlag = true;
