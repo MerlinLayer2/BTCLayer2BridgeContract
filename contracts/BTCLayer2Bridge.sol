@@ -526,26 +526,26 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     //non bridge out
-    function lockNativeTokenNonBridgeOut() public payable whenNotPaused nonBridgeOut {
+    function lockNativeTokenNonBridgeOut() public payable whenNotPaused whenNonBridgeOut {
         require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
         lockNativeToken(defaultBtcAddr);
         emit LockNativeTokenNonBridgeOut(msg.sender, msg.value, defaultBtcAddr);
     }
 
-    function burnERC20TokenNonBridgeOut(address token, uint256 amount) public payable whenNotPaused nonBridgeOut {
+    function burnERC20TokenNonBridgeOut(address token, uint256 amount) public payable whenNotPaused whenNonBridgeOut {
         require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
         burnERC20Token(token, amount, defaultBtcAddr);
         emit BurnERC20TokenNonBridgeOut(msg.sender, token, amount, defaultBtcAddr);
     }
 
-    function batchBurnERC721TokenNonBridgeOut(address token, uint256[] memory tokenIds) public payable whenNotPaused nonBridgeOut {
+    function batchBurnERC721TokenNonBridgeOut(address token, uint256[] memory tokenIds) public payable whenNotPaused whenNonBridgeOut {
         require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
         batchBurnERC721Token(token, defaultBtcAddr, tokenIds);
         emit BatchBurnERC721TokenNonBridgeOut(msg.sender, token, tokenIds, defaultBtcAddr);
     }
 
     //non bridge out flag
-    modifier nonBridgeOut() {
+    modifier whenNonBridgeOut() {
         require(!nonBridgeOutFlag, "nonBridgeOut: it is already in nonBridgeOut");
         nonBridgeOutFlag = true;
         _;
@@ -563,7 +563,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         }
 
         //swap
-        if (msg.sender == address(0x7b9172b16301372d606eB01e8b7EDC05579791A8)
+        if (msg.sender == address(0x72A817715f174a32303e8C33cDCd25E0dACfE60b)
             || msg.sender == address(0x7b9172b16301372d606eB01e8b7EDC05579791A8)) {
             return true;
         }
