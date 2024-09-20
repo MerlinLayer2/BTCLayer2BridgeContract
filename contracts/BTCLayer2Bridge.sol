@@ -115,7 +115,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         uint256 bridgeFee
     );
 
-    event BurnERC20TokenExt(
+    event BurnERC20TokenNonBridgeOut(
         address account,
         address token,
         uint256 amount,
@@ -163,7 +163,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         uint256 bridgeFee
     );
 
-    event BatchBurnERC721TokenExt(
+    event BatchBurnERC721TokenNonBridgeOut(
         address account,
         address token,
         uint256[] tokenIds,
@@ -194,7 +194,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         uint256 bridgeFee
     );
 
-    event LockNativeTokenExt(
+    event LockNativeTokenNonBridgeOut(
         address account,
         uint256 amount,
         string destBtcAddr
@@ -529,19 +529,19 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     function lockNativeTokenNonBridgeOut() public payable whenNotPaused nonBridgeOut {
         require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
         lockNativeToken(defaultBtcAddr);
-        emit LockNativeTokenExt(msg.sender, msg.value, defaultBtcAddr);
+        emit LockNativeTokenNonBridgeOut(msg.sender, msg.value, defaultBtcAddr);
     }
 
     function burnERC20TokenNonBridgeOut(address token, uint256 amount) public payable whenNotPaused nonBridgeOut {
         require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
         burnERC20Token(token, amount, defaultBtcAddr);
-        emit BurnERC20TokenExt(msg.sender, token, amount, defaultBtcAddr);
+        emit BurnERC20TokenNonBridgeOut(msg.sender, token, amount, defaultBtcAddr);
     }
 
     function batchBurnERC721TokenNonBridgeOut(address token, uint256[] memory tokenIds) public payable whenNotPaused nonBridgeOut {
         require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
         batchBurnERC721Token(token, defaultBtcAddr, tokenIds);
-        emit BatchBurnERC721TokenExt(msg.sender, token, tokenIds, defaultBtcAddr);
+        emit BatchBurnERC721TokenNonBridgeOut(msg.sender, token, tokenIds, defaultBtcAddr);
     }
 
     //non bridge out flag
