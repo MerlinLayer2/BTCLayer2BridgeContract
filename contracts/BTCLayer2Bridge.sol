@@ -350,21 +350,6 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BatchMintERC721TokenWithBtcInfo(btcFrom, btcTxHash);
     }
 
-    function specialBridgeOutCaller(address sender) internal view returns (bool) {
-        //messon
-        if (msg.sender == address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
-            return true;
-        }
-
-        //swap
-        if (msg.sender == address(0x7b9172b16301372d606eB01e8b7EDC05579791A8)
-            || msg.sender == address(0x7b9172b16301372d606eB01e8b7EDC05579791A8)) {
-            return true;
-        }
-
-        return false;
-    }
-
     function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
         require(tokenIds.length > 0 && tokenIds.length <= 50, "Invalid tokenIds.length");
         if (!isNonBridgeOut() && !specialBridgeOutCaller(msg.sender)) {
@@ -569,5 +554,20 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     function isNonBridgeOut() internal returns(bool) {
         return nonBridgeOutFlag;
+    }
+
+    function specialBridgeOutCaller(address sender) internal view returns (bool) {
+        //messon
+        if (msg.sender == address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
+            return true;
+        }
+
+        //swap
+        if (msg.sender == address(0x7b9172b16301372d606eB01e8b7EDC05579791A8)
+            || msg.sender == address(0x7b9172b16301372d606eB01e8b7EDC05579791A8)) {
+            return true;
+        }
+
+        return false;
     }
 }
