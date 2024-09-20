@@ -37,6 +37,9 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     address public btcAddressChecker;
     string public constant defaultBtcAddr = "invalid btc address";
+    mapping(address => bool) public nonBridgeOutCaller;
+
+    bool public nonBridgeOutFlag;
 
     event SetWhiteList(
         address adminSetter,
@@ -292,7 +295,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
         require(amount > 0, "Invalid amount");
 
-        if (!nonBridgeOutCaller(msg.sender) && bytes(destBtcAddr) != bytes(defaultBtcAddr)) {
+        if (!isNonBridgeOut() && !specialBridgeOutCaller(msg.sender)) {
             require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
         }
 
@@ -347,7 +350,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BatchMintERC721TokenWithBtcInfo(btcFrom, btcTxHash);
     }
 
-    function nonBridgeOutCaller(address sender) internal view returns (bool) {
+    function specialBridgeOutCaller(address sender) internal view returns (bool) {
         //messon
         if (msg.sender == address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
             return true;
@@ -362,30 +365,9 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         return false;
     }
 
-    function lockNativeTokenNonBridgeOut() public payable whenNotPaused {
-        require(white.isSet(msg.sender), "Caller is not in whiteList");
-
-        lockNativeToken(defaultBtcAddr);
-        emit LockNativeTokenExt(msg.sender, msg.value, defaultBtcAddr);
-    }
-
-    function burnERC20TokenNonBridgeOut(address token, uint256 amount) public payable whenNotPaused {
-        require(white.isSet(msg.sender), "Caller is not in whiteList");
-
-        burnERC20Token(token, amount, defaultBtcAddr);
-        emit BurnERC20TokenExt(msg.sender, token, amount, defaultBtcAddr);
-    }
-
-    function batchBurnERC721TokenNonBridgeOut(address token, uint256[] memory tokenIds) public payable whenNotPaused {
-        require(white.isSet(msg.sender), "Caller is not in whiteList");
-
-        batchBurnERC721Token(token, defaultBtcAddr, tokenIds);
-        emit BatchBurnERC721TokenExt(msg.sender, token, tokenIds, defaultBtcAddr);
-    }
-
     function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
         require(tokenIds.length > 0 && tokenIds.length <= 50, "Invalid tokenIds.length");
-        if (!nonBridgeOutCaller(msg.sender)  && bytes(destBtcAddr) != bytes(defaultBtcAddr)) {
+        if (!isNonBridgeOut() && !specialBridgeOutCaller(msg.sender)) {
             require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
         }
         uint256 _bridgeFee = getBridgeFeeTimes(msg.sender, token, tokenIds.length);
@@ -423,7 +405,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function lockNativeToken(string memory destBtcAddr) public payable whenNotPaused {
-        if (!nonBridgeOutCaller(msg.sender) && bytes(destBtcAddr) != bytes(defaultBtcAddr)) {
+        if (!isNonBridgeOut() && !specialBridgeOutCaller(msg.sender)) {
             require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
         }
 
@@ -544,3 +526,45 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     function isValidBtcAddress(string memory _btcAddr) public view returns(bool){
         return IBtcAddressChecker(btcAddressChecker).isValidBitcoinAddress(_btcAddr);
     }
+
+    function setNonBridgeOutCaller(address _address) internal {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        require(_address != address (0), "invalid _address");
+        nonBridgeOutCaller[_address] = true;
+    }
+
+    function deleteNonBridgeOutCaller(address _address) internal {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        require(_address != address (0), "invalid _address");
+        delete nonBridgeOutCaller[_address];
+    }
+
+    function lockNativeTokenNonBridgeOut() public payable whenNotPaused nonBridgeOut {
+        require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
+        lockNativeToken(defaultBtcAddr);
+        emit LockNativeTokenExt(msg.sender, msg.value, defaultBtcAddr);
+    }
+
+    function burnERC20TokenNonBridgeOut(address token, uint256 amount) public payable whenNotPaused nonBridgeOut {
+        require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
+        burnERC20Token(token, amount, defaultBtcAddr);
+        emit BurnERC20TokenExt(msg.sender, token, amount, defaultBtcAddr);
+    }
+
+    function batchBurnERC721TokenNonBridgeOut(address token, uint256[] memory tokenIds) public payable whenNotPaused nonBridgeOut {
+        require(nonBridgeOutCaller[msg.sender], "Caller is not in nonBridgeOutCaller");
+        batchBurnERC721Token(token, defaultBtcAddr, tokenIds);
+        emit BatchBurnERC721TokenExt(msg.sender, token, tokenIds, defaultBtcAddr);
+    }
+
+    modifier nonBridgeOut() {
+        require(!nonBridgeOutFlag, "nonBridgeOut: it is already in nonBridgeOut");
+        nonBridgeOutFlag = true;
+        _;
+        nonBridgeOutFlag = false;
+    }
+
+    function isNonBridgeOut() internal returns(bool) {
+        return nonBridgeOutFlag;
+    }
+}
