@@ -74,12 +74,6 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         bool flag
     );
 
-    event SetNonBridgeOutBtcAddress(
-        address adminSetter,
-        string oldBridgeOutCaller,
-        string newBridgeOutCaller
-    );
-
     event PauseEvent(
         address pauseAdmin,
         bool paused
