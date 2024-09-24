@@ -456,7 +456,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     //_address is msg.sender or token.
-    function setWhiteList(address _address, uint256 _rate) external {
+    function setWhiteList(address _address, uint256 _rate) public {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
         white.setWhiteList(_address, _rate);
         emit SetWhiteList(msg.sender, _address, _rate);
@@ -487,12 +487,14 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         return IBtcAddressChecker(btcAddressChecker).isValidBitcoinAddress(_btcAddr);
     }
 
-    function toggleNonBridgeOutCaller(address _bridgeOutCaller) external {
+    function toggleNonBridgeOutCaller(address _bridgeOutCaller, uint256 rate) external {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         require(_bridgeOutCaller != address(0), "invalid _bridgeOutCaller");
         bool enabled = !nonBridgeOutCaller[_bridgeOutCaller];
         nonBridgeOutCaller[_bridgeOutCaller] = enabled;
         emit ToggleNonBridgeOutCaller(msg.sender, _bridgeOutCaller, enabled);
+
+        setWhiteList(_bridgeOutCaller, rate);
     }
 
     function checkDestBtcAddr(string memory destBtcAddr) internal view returns (string memory) {
