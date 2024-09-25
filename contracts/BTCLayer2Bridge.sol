@@ -25,7 +25,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     uint256 public bridgeFee;
     address public feeAddress;
 
-    string public constant version = "1.5.1";
+    string public constant version = "1.5.2";
     string public constant nonBridgeOutBtcAddr = "-";
 
     uint256 public constant MaxBridgeFee = 50000000000000000; //max 0.05
