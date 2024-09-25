@@ -484,6 +484,9 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function validBtcAddress(string memory _btcAddr) public view returns (bool){
+        if (btcAddressChecker == address(0)) {
+            return true;
+        }
         return IBtcAddressChecker(btcAddressChecker).isValidBitcoinAddress(_btcAddr);
     }
 
