@@ -26,6 +26,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     address public feeAddress;
 
     string public constant version = "1.5.0";
+    string public constant nonBridgeOutBtcAddr = "-";
 
     uint256 public constant MaxBridgeFee = 50000000000000000; //max 0.05
 
@@ -36,6 +37,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     BridgeFeeRates.White private white;
 
     address public btcAddressChecker;
+    mapping(address => bool) public nonBridgeOutCaller;
 
     event SetWhiteList(
         address adminSetter,
@@ -64,6 +66,12 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address adminSetter,
         address oldAddress,
         address newAddress
+    );
+
+    event ToggleNonBridgeOutCaller(
+        address adminSetter,
+        address bridgeOutCaller,
+        bool enabled
     );
 
     event PauseEvent(
@@ -268,20 +276,17 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit MintERC20TokenWithBtcInfo(btcFrom, btcTxHash);
     }
 
-    function burnERC20Token(address token, uint256 amount, string calldata destBtcAddr) public payable whenNotPaused {
+    function burnERC20Token(address token, uint256 amount, string memory destBtcAddr) public payable whenNotPaused {
         require(amount > 0, "Invalid amount");
-        require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
+        destBtcAddr = checkDestBtcAddr(destBtcAddr);
 
-        uint256 _bridgeFee = 0;
-        if (msg.sender != address(0x7ef8F2a8048948d43642e0358A183147e154550A)) {
-            _bridgeFee = getBridgeFee(msg.sender, token);
-            require(msg.value == _bridgeFee, "invalid bridgeFee");
+        uint256 _bridgeFee = getBridgeFee(msg.sender, token);
+        require(msg.value == _bridgeFee, "invalid bridgeFee");
 
-            if (_bridgeFee > 0) {
-                (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
-                if (!success) {
-                    revert EtherTransferFailed();
-                }
+        if (_bridgeFee > 0) {
+            (bool success,) = feeAddress.call{value: _bridgeFee}(new bytes(0));
+            if (!success) {
+                revert EtherTransferFailed();
             }
         }
         IBTCLayer2BridgeERC20(bridgeERC20Address).burnERC20Token(msg.sender, token, amount);
@@ -323,9 +328,10 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit BatchMintERC721TokenWithBtcInfo(btcFrom, btcTxHash);
     }
 
-    function batchBurnERC721Token(address token, string calldata destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
+    function batchBurnERC721Token(address token, string memory destBtcAddr, uint256[] memory tokenIds) public payable whenNotPaused {
         require(tokenIds.length > 0 && tokenIds.length <= 50, "Invalid tokenIds.length");
-        require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
+        destBtcAddr = checkDestBtcAddr(destBtcAddr);
+
         uint256 _bridgeFee = getBridgeFeeTimes(msg.sender, token, tokenIds.length);
         require(msg.value == _bridgeFee, "Invalid bridgeFee");
 
@@ -360,9 +366,10 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit UnlockNativeTokenWithBtcInfo(btcFrom, btcTxHash);
     }
 
-    function lockNativeToken(string calldata destBtcAddr) public payable whenNotPaused {
-        require(isValidBtcAddress(destBtcAddr), "Invalid destBtcAddr");
-        uint256 _bridgeFee = getBridgeFee(msg.sender, address (0));
+    function lockNativeToken(string memory destBtcAddr) public payable whenNotPaused {
+        destBtcAddr = checkDestBtcAddr(destBtcAddr);
+
+        uint256 _bridgeFee = getBridgeFee(msg.sender, address(0));
         require(msg.value > _bridgeFee, "Insufficient cross-chain assets");
 
         if (_bridgeFee > 0) {
@@ -449,7 +456,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     //_address is msg.sender or token.
-    function setWhiteList(address _address, uint256 _rate) external {
+    function setWhiteList(address _address, uint256 _rate) public {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal pause permissions");
         white.setWhiteList(_address, _rate);
         emit SetWhiteList(msg.sender, _address, _rate);
@@ -461,11 +468,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit DeleteWhiteList(msg.sender, _address);
     }
 
-    function getBridgeFee(address msgSender, address token) public view returns(uint256) {
+    function getBridgeFee(address msgSender, address token) public view returns (uint256) {
         return bridgeFee * white.getBridgeFeeRate(msgSender, token) / 100;
     }
 
-    function getBridgeFeeTimes(address msgSender, address token, uint256 times) public view returns(uint256) {
+    function getBridgeFeeTimes(address msgSender, address token, uint256 times) public view returns (uint256) {
         return bridgeFee * white.getBridgeFeeRateTimes(msgSender, token, times) / 100;
     }
 
@@ -476,7 +483,25 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit SetBtcAddressChecker(msg.sender, oldAddress, _address);
     }
 
-    function isValidBtcAddress(string calldata _btcAddr) public view returns(bool){
+    function validBtcAddress(string memory _btcAddr) public view returns (bool){
         return IBtcAddressChecker(btcAddressChecker).isValidBitcoinAddress(_btcAddr);
+    }
+
+    function toggleNonBridgeOutCaller(address _bridgeOutCaller, uint256 rate) external {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        require(_bridgeOutCaller != address(0), "invalid _bridgeOutCaller");
+        bool enabled = !nonBridgeOutCaller[_bridgeOutCaller];
+        nonBridgeOutCaller[_bridgeOutCaller] = enabled;
+        emit ToggleNonBridgeOutCaller(msg.sender, _bridgeOutCaller, enabled);
+
+        setWhiteList(_bridgeOutCaller, rate);
+    }
+
+    function checkDestBtcAddr(string memory destBtcAddr) internal view returns (string memory) {
+        if (nonBridgeOutCaller[msg.sender]) {
+            return nonBridgeOutBtcAddr;
+        }
+        require(validBtcAddress(destBtcAddr), "Invalid destBtcAddr");
+        return destBtcAddr;
     }
 }
