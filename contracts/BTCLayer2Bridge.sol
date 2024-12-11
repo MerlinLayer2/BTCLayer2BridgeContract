@@ -39,6 +39,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     address public btcAddressChecker;
     mapping(address => bool) public nonBridgeOutCaller;
 
+    address public addTokenAdmin;
+
     event SetWhiteList(
         address adminSetter,
         address addressKey,
@@ -97,6 +99,12 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     event DelUnlockTokenAdminAddress(
         address account
+    );
+
+    event SetAddTokenAdmin(
+        address adminSetter,
+        address oldAddTokenAdmin,
+        address newAddTokenAdmin
     );
 
     event MintERC20Token(
@@ -256,6 +264,13 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         unlockTokenAdminAddressList.pop();
 
         emit DelUnlockTokenAdminAddress(_account);
+    }
+
+    function setAddTokenAdmin(address _account) public onlyValidAddress(_account) {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        address oldAddTokenAdmin = addTokenAdmin;
+        addTokenAdmin = _account;
+        emit SetAddTokenAdmin(msg.sender, oldAddTokenAdmin, _account);
     }
 
     function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) public returns (address) {
