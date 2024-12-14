@@ -25,7 +25,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     uint256 public bridgeFee;
     address public feeAddress;
 
-    string public constant version = "1.5.0";
+    string public constant version = "1.6.0";
     string public constant nonBridgeOutBtcAddr = "-";
 
     uint256 public constant MaxBridgeFee = 50000000000000000; //max 0.05
@@ -38,6 +38,8 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     address public btcAddressChecker;
     mapping(address => bool) public nonBridgeOutCaller;
+
+    address public addTokenAdmin;
 
     event SetWhiteList(
         address adminSetter,
@@ -97,6 +99,12 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
 
     event DelUnlockTokenAdminAddress(
         address account
+    );
+
+    event SetAddTokenAdmin(
+        address adminSetter,
+        address oldAddTokenAdmin,
+        address newAddTokenAdmin
     );
 
     event MintERC20Token(
@@ -258,8 +266,15 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit DelUnlockTokenAdminAddress(_account);
     }
 
-    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) public returns (address) {
+    function setAddTokenAdmin(address _account) public onlyValidAddress(_account) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        address oldAddTokenAdmin = addTokenAdmin;
+        addTokenAdmin = _account;
+        emit SetAddTokenAdmin(msg.sender, oldAddTokenAdmin, _account);
+    }
+
+    function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) public returns (address) {
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress || msg.sender == addTokenAdmin, "Illegal permissions");
         address tokenWrappedAddress = IBTCLayer2BridgeERC20(bridgeERC20Address).addERC20TokenWrapped(_name, _symbol, _decimals, _cap);
         emit AddERC20TokenWrapped(tokenWrappedAddress, _name, _symbol, _decimals, _cap);
         return tokenWrappedAddress;
@@ -300,7 +315,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) public returns (address) {
-        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress  || msg.sender == addTokenAdmin, "Illegal permissions");
         address tokenWrappedAddress = IBTCLayer2BridgeERC721(bridgeERC721Address).addERC721TokenWrapped(_name, _symbol, _baseURI);
         emit AddERC721TokenWrapped(tokenWrappedAddress, _name, _symbol, _baseURI);
         return tokenWrappedAddress;
