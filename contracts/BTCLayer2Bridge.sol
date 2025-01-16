@@ -39,7 +39,11 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     address public btcAddressChecker;
     mapping(address => bool) public nonBridgeOutCaller;
 
+    //Abandoned code
     address public addTokenAdmin;
+
+    mapping(address => bool) public createTokenAdmin;
+    address[] public createTokenAdminList;
 
     event SetWhiteList(
         address adminSetter,
@@ -101,10 +105,10 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         address account
     );
 
-    event SetAddTokenAdmin(
+    event SetAddTokenAdmins(
         address adminSetter,
-        address oldAddTokenAdmin,
-        address newAddTokenAdmin
+        address account,
+        bool bl
     );
 
     event MintERC20Token(
@@ -252,29 +256,36 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
         require(unlockTokenAdminAddressSupported[_account] == true, "Current address is not exist");
         unlockTokenAdminAddressSupported[_account] = false;
-
-        uint16 i = 0;
-        for (i = 0; i < unlockTokenAdminAddressList.length; i++) {
-            if (unlockTokenAdminAddressList[i] == _account) {
-                break;
-            }
-        }
-        require(i < unlockTokenAdminAddressList.length, "Current address is out of unlockTokenAdminAddressList");
-        unlockTokenAdminAddressList[i] = unlockTokenAdminAddressList[unlockTokenAdminAddressList.length - 1];
-        unlockTokenAdminAddressList.pop();
-
+        delKeyFromAddressList(unlockTokenAdminAddressList, _account);
         emit DelUnlockTokenAdminAddress(_account);
     }
 
-    function setAddTokenAdmin(address _account) public onlyValidAddress(_account) {
+    function setAddTokenAdmins(address _account, bool bl) public onlyValidAddress(_account) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        address oldAddTokenAdmin = addTokenAdmin;
-        addTokenAdmin = _account;
-        emit SetAddTokenAdmin(msg.sender, oldAddTokenAdmin, _account);
+        require(createTokenAdmin[_account] != bl, "account state is already set");
+        createTokenAdmin[_account] == bl;
+        if (bl) {
+            createTokenAdminList.push(_account);
+        } else {
+            delKeyFromAddressList(createTokenAdminList, _account);
+        }
+        emit SetAddTokenAdmins(msg.sender, _account, bl);
+    }
+
+    function delKeyFromAddressList(address[] storage list, address key) internal {
+        uint16 i = 0;
+        for (i = 0; i < list.length; i++) {
+            if (list[i] == key) {
+                break;
+            }
+        }
+        require(i < list.length, "Current address is out of list");
+        list[i] = list[list.length - 1];
+        list.pop();
     }
 
     function addERC20TokenWrapped(string memory _name, string memory _symbol, uint8 _decimals, uint256 _cap) public returns (address) {
-        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress || msg.sender == addTokenAdmin, "Illegal permissions");
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress || createTokenAdmin[msg.sender], "Illegal permissions");
         address tokenWrappedAddress = IBTCLayer2BridgeERC20(bridgeERC20Address).addERC20TokenWrapped(_name, _symbol, _decimals, _cap);
         emit AddERC20TokenWrapped(tokenWrappedAddress, _name, _symbol, _decimals, _cap);
         return tokenWrappedAddress;
@@ -315,7 +326,7 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
     }
 
     function addERC721TokenWrapped(string memory _name, string memory _symbol, string memory _baseURI) public returns (address) {
-        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress  || msg.sender == addTokenAdmin, "Illegal permissions");
+        require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress  || createTokenAdmin[msg.sender], "Illegal permissions");
         address tokenWrappedAddress = IBTCLayer2BridgeERC721(bridgeERC721Address).addERC721TokenWrapped(_name, _symbol, _baseURI);
         emit AddERC721TokenWrapped(tokenWrappedAddress, _name, _symbol, _baseURI);
         return tokenWrappedAddress;
