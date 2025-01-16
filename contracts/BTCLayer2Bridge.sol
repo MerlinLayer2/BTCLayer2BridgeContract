@@ -260,16 +260,16 @@ contract BTCLayer2Bridge is OwnableUpgradeable {
         emit DelUnlockTokenAdminAddress(_account);
     }
 
-    function setAddTokenAdmins(address _account, bool bl) public onlyValidAddress(_account) {
+    function setAddTokenAdmins(address _account, bool _bl) public onlyValidAddress(_account) {
         require(msg.sender == superAdminAddress || msg.sender == normalAdminAddress, "Illegal permissions");
-        require(createTokenAdmin[_account] != bl, "account state is already set");
-        createTokenAdmin[_account] == bl;
-        if (bl) {
+        require(createTokenAdmin[_account] != _bl, "account state is already set");
+        createTokenAdmin[_account] == _bl;
+        if (_bl) {
             createTokenAdminList.push(_account);
         } else {
             delKeyFromAddressList(createTokenAdminList, _account);
         }
-        emit SetAddTokenAdmins(msg.sender, _account, bl);
+        emit SetAddTokenAdmins(msg.sender, _account, _bl);
     }
 
     function delKeyFromAddressList(address[] storage list, address key) internal {
